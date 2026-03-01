@@ -5,23 +5,24 @@ export default function MessageInput({ setMessages, messages }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef(null);
 
-  const sendMessage = async () => {
-    if (!input.trim() || isGenerating) return;
+  const sendMessage = async (externalText = null) => {
+    const textToSend = externalText || input;
 
-    const userText = input;
+    if (!textToSend.trim() || isGenerating) return;
 
-    const userMessage = { role: "user", content: userText };
+    const userMessage = { role: "user", content: textToSend };
     const updatedMessages = [...messages, userMessage];
 
     setMessages(updatedMessages);
     setInput("");
     setIsGenerating(true);
 
-    // Show thinking bubble immediately
-    setMessages([
+    // Show typing bubble
+    const withTyping = [
       ...updatedMessages,
       { role: "assistant", typing: true }
-    ]);
+    ];
+    setMessages(withTyping);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -34,12 +35,11 @@ export default function MessageInput({ setMessages, messages }) {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ message: userText }),
+          body: JSON.stringify({ message: textToSend }),
           signal: controller.signal
         }
       );
 
-      // 🔥 Handle backend JSON errors
       if (!response.ok) {
         const errorData = await response.json();
         setMessages([
@@ -54,28 +54,18 @@ export default function MessageInput({ setMessages, messages }) {
       const decoder = new TextDecoder("utf-8");
 
       let assistantMessage = "";
-      let hasStartedStreaming = false;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-
         assistantMessage += chunk;
 
-        // Replace typing bubble on first token
-        if (!hasStartedStreaming) {
-          hasStartedStreaming = true;
-        }
-
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.typing
-              ? { role: "assistant", content: assistantMessage }
-              : msg
-          )
-        );
+        setMessages([
+          ...updatedMessages,
+          { role: "assistant", content: assistantMessage }
+        ]);
       }
 
     } catch (error) {
@@ -92,8 +82,7 @@ export default function MessageInput({ setMessages, messages }) {
       abortControllerRef.current.abort();
     }
 
-    // Remove typing bubble if still present
-    setMessages(prev => prev.filter(msg => !msg.typing));
+    setMessages(messages.filter(msg => !msg.typing));
     setIsGenerating(false);
   };
 
@@ -119,7 +108,7 @@ export default function MessageInput({ setMessages, messages }) {
 
       {!isGenerating ? (
         <button
-          onClick={sendMessage}
+          onClick={() => sendMessage()}
           disabled={!input.trim()}
           className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full shadow-lg transition-all duration-200 ${
             input.trim()
@@ -155,15 +144,13 @@ export default function MessageInput({ setMessages, messages }) {
               cx="12"
               cy="12"
               r="10"
-              stroke="currentColor"
-              strokeWidth="4"
               className="opacity-25"
+              strokeWidth="4"
             />
             <path
               d="M4 12a8 8 0 018-8"
-              stroke="currentColor"
-              strokeWidth="4"
               className="opacity-75"
+              strokeWidth="4"
             />
           </svg>
         </button>
