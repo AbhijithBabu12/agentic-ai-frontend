@@ -17,6 +17,12 @@ export default function MessageInput({ setMessages, messages }) {
     setInput("");
     setIsGenerating(true);
 
+    // Show thinking bubble immediately
+    setMessages([
+      ...updatedMessages,
+      { role: "assistant", typing: true }
+    ]);
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -33,21 +39,43 @@ export default function MessageInput({ setMessages, messages }) {
         }
       );
 
+      // 🔥 Handle backend JSON errors
+      if (!response.ok) {
+        const errorData = await response.json();
+        setMessages([
+          ...updatedMessages,
+          { role: "assistant", content: `⚠️ ${errorData.error}` }
+        ]);
+        setIsGenerating(false);
+        return;
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
 
       let assistantMessage = "";
+      let hasStartedStreaming = false;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        assistantMessage += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true });
 
-        setMessages([
-          ...updatedMessages,
-          { role: "assistant", content: assistantMessage }
-        ]);
+        assistantMessage += chunk;
+
+        // Replace typing bubble on first token
+        if (!hasStartedStreaming) {
+          hasStartedStreaming = true;
+        }
+
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.typing
+              ? { role: "assistant", content: assistantMessage }
+              : msg
+          )
+        );
       }
 
     } catch (error) {
@@ -63,6 +91,9 @@ export default function MessageInput({ setMessages, messages }) {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+
+    // Remove typing bubble if still present
+    setMessages(prev => prev.filter(msg => !msg.typing));
     setIsGenerating(false);
   };
 
@@ -74,16 +105,14 @@ export default function MessageInput({ setMessages, messages }) {
         disabled={isGenerating}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            sendMessage();
-          }
+          if (e.key === "Enter") sendMessage();
         }}
         className={`w-full px-6 py-4 pr-16 rounded-3xl border shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${
           isGenerating ? "bg-gray-100 cursor-not-allowed" : "bg-white"
         }`}
         placeholder={
           isGenerating
-            ? "Assistant is generating..."
+            ? "Assistant is thinking..."
             : "Message your assistant..."
         }
       />
