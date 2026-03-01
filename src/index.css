@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🔥 Zig Zag Animation */
+@keyframes zigzag {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-4px) translateX(4px);
+  }
+  50% {
+    transform: translateY(0) translateX(8px);
+  }
+  75% {
+    transform: translateY(4px) translateX(4px);
+  }
+}
+
+.zigzag-dot {
+  animation: zigzag 1s infinite ease-in-out;
+}
