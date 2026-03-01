@@ -10,7 +10,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef(null);
 
-  // 🔥 Allow Landing to trigger message
   useImperativeHandle(ref, () => ({
     sendExternalMessage: (text) => {
       sendMessage(text);
@@ -29,7 +28,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     setInput("");
     setIsGenerating(true);
 
-    // Show typing bubble
     setMessages([
       ...updatedMessages,
       { role: "assistant", typing: true }
@@ -96,7 +94,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
   return (
     <div className="relative w-full">
-
       <input
         value={input}
         disabled={isGenerating}
@@ -124,24 +121,13 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
-          {/* Send Icon */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
+          ➤
         </button>
       ) : (
         <button
           onClick={stopGeneration}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
-          {/* Rotating Loader */}
           <svg
             className="w-4 h-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
@@ -165,7 +151,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
           </svg>
         </button>
       )}
-
     </div>
   );
 });
