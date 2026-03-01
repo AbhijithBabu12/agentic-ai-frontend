@@ -163,6 +163,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       )}
     </div>
   );
-}
+});
 
 export default MessageInput;
