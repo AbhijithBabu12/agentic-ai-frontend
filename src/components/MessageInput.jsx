@@ -10,6 +10,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef(null);
 
+  // 🔥 Allow Landing to trigger message
   useImperativeHandle(ref, () => ({
     sendExternalMessage: (text) => {
       sendMessage(text);
@@ -28,18 +29,25 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     setInput("");
     setIsGenerating(true);
 
+    // Show typing bubble immediately
     setMessages([
       ...updatedMessages,
       { role: "assistant", typing: true }
     ]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/message`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: textToSend })
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message: textToSend }),
+          signal: controller.signal
         }
       );
 
@@ -71,14 +79,26 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       }
 
     } catch (error) {
-      console.error(error);
+      if (error.name !== "AbortError") {
+        console.error("Streaming error:", error);
+      }
     }
 
     setIsGenerating(false);
   };
 
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    setMessages(prev => prev.filter(msg => !msg.typing));
+    setIsGenerating(false);
+  };
+
   return (
     <div className="relative w-full">
+
       <input
         value={input}
         disabled={isGenerating}
@@ -86,16 +106,36 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         onKeyDown={(e) => {
           if (e.key === "Enter") sendMessage();
         }}
-        className="w-full px-6 py-4 pr-16 rounded-3xl border shadow-md"
-        placeholder="Message your assistant..."
+        className={`w-full px-6 py-4 pr-16 rounded-3xl border shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition ${
+          isGenerating ? "bg-gray-100 cursor-not-allowed" : "bg-white"
+        }`}
+        placeholder={
+          isGenerating
+            ? "Assistant is thinking..."
+            : "Message your assistant..."
+        }
       />
 
-      <button
-        onClick={sendMessage}
-        className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full"
-      >
-        ➤
-      </button>
+      {!isGenerating ? (
+        <button
+          onClick={() => sendMessage()}
+          disabled={!input.trim()}
+          className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full shadow-lg transition-all duration-200 ${
+            input.trim()
+              ? "bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-105"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
+        >
+          ➤
+        </button>
+      ) : (
+        <button
+          onClick={stopGeneration}
+          className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-3 rounded-full shadow-lg"
+        >
+          ⏹
+        </button>
+      )}
     </div>
   );
 });
