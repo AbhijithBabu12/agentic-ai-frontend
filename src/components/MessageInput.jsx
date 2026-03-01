@@ -29,7 +29,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     setInput("");
     setIsGenerating(true);
 
-    // Show typing bubble immediately
+    // Show typing bubble
     setMessages([
       ...updatedMessages,
       { role: "assistant", typing: true }
@@ -43,9 +43,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         `${import.meta.env.VITE_BACKEND_URL}/message`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: textToSend }),
           signal: controller.signal
         }
@@ -118,24 +116,56 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
       {!isGenerating ? (
         <button
-          onClick={() => sendMessage()}
+          onClick={sendMessage}
           disabled={!input.trim()}
-          className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full shadow-lg transition-all duration-200 ${
+          className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full shadow transition ${
             input.trim()
-              ? "bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-105"
+              ? "bg-indigo-600 hover:bg-indigo-700 text-white"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
-          ➤
+          {/* Send Icon */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
         </button>
       ) : (
         <button
           onClick={stopGeneration}
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-3 rounded-full shadow-lg"
+          className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
-          ⏹
+          {/* Rotating Loader */}
+          <svg
+            className="w-4 h-4 animate-spin"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              className="opacity-25"
+            />
+            <path
+              d="M4 12a8 8 0 018-8"
+              stroke="currentColor"
+              strokeWidth="4"
+              className="opacity-75"
+            />
+          </svg>
         </button>
       )}
+
     </div>
   );
 });
