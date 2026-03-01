@@ -1,5 +1,6 @@
 import logo from "../assets/logo.png";
-export default function Landing({ setMessages }) {
+
+export default function Landing({ onQuickAction }) {
 
   const quickActions = [
     "What can you do?",
@@ -10,12 +11,10 @@ export default function Landing({ setMessages }) {
   return (
     <div className="flex flex-col items-center justify-center flex-1 text-center">
 
-      {/* LOGO */}
-
       <img
-        src = {logo}
-        alt = 'logo'
-        className="w-24 h-24 mb-0 object-contain"
+        src={logo}
+        alt="logo"
+        className="w-24 h-24 object-contain"
       />
 
       <h1 className="text-4xl font-bold mb-4">
@@ -30,10 +29,8 @@ export default function Landing({ setMessages }) {
         {quickActions.map((action, i) => (
           <button
             key={i}
-            onClick={() =>
-              setMessages([{ role: "user", content: action }])
-            }
-            className="px-4 py-2 bg-white shadow rounded-lg"
+            onClick={() => onQuickAction(action)}
+            className="px-4 py-2 bg-white shadow rounded-lg hover:shadow-md transition"
           >
             {action}
           </button>
