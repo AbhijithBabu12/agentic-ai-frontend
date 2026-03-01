@@ -14,7 +14,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     sendExternalMessage: (text) => {
       sendMessage(text);
     }
-  })); // <-- This was missing a closing parenthesis
+  }));
 
   const sendMessage = async (externalText = null) => {
     const textToSend = externalText || input;
@@ -73,7 +73,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
           { role: "assistant", content: assistantMessage }
         ]);
       }
-
     } catch (error) {
       if (error.name !== "AbortError") {
         console.error("Streaming error:", error);
@@ -135,18 +134,17 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
             viewBox="0 0 24 24"
           >
             <circle
+              className="opacity-25"
               cx="12"
               cy="12"
               r="10"
               stroke="currentColor"
               strokeWidth="4"
-              className="opacity-25"
             />
             <path
-              d="M4 12a8 8 0 018-8"
-              stroke="currentColor"
-              strokeWidth="4"
               className="opacity-75"
+              d="M4 12a8 8 0 018-8"
+              fill="currentColor"
             />
           </svg>
         </button>
