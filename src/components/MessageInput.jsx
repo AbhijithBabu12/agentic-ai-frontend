@@ -1,9 +1,21 @@
-import { useState, useRef } from "react";
+import {
+  useState,
+  useRef,
+  forwardRef,
+  useImperativeHandle
+} from "react";
 
-export default function MessageInput({ setMessages, messages }) {
+const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef(null);
+
+  // 🔥 Allow Landing to trigger message
+  useImperativeHandle(ref, () => ({
+    sendExternalMessage: (text) => {
+      sendMessage(text);
+    }
+  }));
 
   const sendMessage = async (externalText = null) => {
     const textToSend = externalText || input;
@@ -17,12 +29,11 @@ export default function MessageInput({ setMessages, messages }) {
     setInput("");
     setIsGenerating(true);
 
-    // Show typing bubble
-    const withTyping = [
+    // Show typing bubble immediately
+    setMessages([
       ...updatedMessages,
       { role: "assistant", typing: true }
-    ];
-    setMessages(withTyping);
+    ]);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -59,8 +70,7 @@ export default function MessageInput({ setMessages, messages }) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        assistantMessage += chunk;
+        assistantMessage += decoder.decode(value, { stream: true });
 
         setMessages([
           ...updatedMessages,
@@ -82,7 +92,7 @@ export default function MessageInput({ setMessages, messages }) {
       abortControllerRef.current.abort();
     }
 
-    setMessages(messages.filter(msg => !msg.typing));
+    setMessages(prev => prev.filter(msg => !msg.typing));
     setIsGenerating(false);
   };
 
@@ -116,45 +126,18 @@ export default function MessageInput({ setMessages, messages }) {
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
+          ➤
         </button>
       ) : (
         <button
           onClick={stopGeneration}
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-3 rounded-full shadow-lg transition-all duration-200"
+          className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-3 rounded-full shadow-lg"
         >
-          <svg
-            className="w-4 h-4 animate-spin"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              className="opacity-25"
-              strokeWidth="4"
-            />
-            <path
-              d="M4 12a8 8 0 018-8"
-              className="opacity-75"
-              strokeWidth="4"
-            />
-          </svg>
+          ⏹
         </button>
       )}
     </div>
   );
-}
+});
+
+export default MessageInput;
