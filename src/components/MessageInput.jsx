@@ -14,7 +14,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     sendExternalMessage: (text) => {
       sendMessage(text);
     }
-  }));
+  })); // <-- This was missing a closing parenthesis
 
   const sendMessage = async (externalText = null) => {
     const textToSend = externalText || input;
