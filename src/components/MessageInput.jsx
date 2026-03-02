@@ -1,4 +1,5 @@
 console.log("NEW MESSAGE INPUT VERSION LOADED");
+
 import {
   useState,
   useRef,
@@ -6,7 +7,7 @@ import {
   useImperativeHandle
 } from "react";
 
-const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
+const MessageInput = forwardRef(({ setMessages }, ref) => {
 
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,9 +25,12 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     const textToSend = externalText || input;
     if (!textToSend.trim() || isGenerating) return;
 
-    const userMessage = { role: "user", content: textToSend };
+    // Add user message
+    setMessages(prev => [
+      ...prev,
+      { role: "user", content: textToSend }
+    ]);
 
-    setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsGenerating(true);
 
@@ -48,7 +52,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       const contentType = response.headers.get("content-type");
 
       // ----------------------------
-      // 🔥 EMAIL / ERROR MODE (JSON)
+      // ✅ EMAIL / ERROR MODE (JSON)
       // ----------------------------
       if (contentType && contentType.includes("application/json")) {
 
@@ -78,14 +82,15 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       }
 
       // ----------------------------
-      // 🔥 STREAM MODE (CHAT ONLY)
+      // ✅ STREAM MODE (CHAT ONLY)
       // ----------------------------
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
 
       let assistantMessage = "";
 
-      // Show typing placeholder
+      // Add typing bubble safely
       setMessages(prev => [
         ...prev,
         { role: "assistant", typing: true }
@@ -99,10 +104,18 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: "assistant",
-            content: assistantMessage
-          };
+
+          // SAFETY CHECK
+          if (
+            updated.length > 0 &&
+            updated[updated.length - 1].typing
+          ) {
+            updated[updated.length - 1] = {
+              role: "assistant",
+              content: assistantMessage
+            };
+          }
+
           return updated;
         });
       }
@@ -124,7 +137,20 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       abortControllerRef.current.abort();
     }
 
-    setMessages(prev => prev.filter(msg => !msg.typing));
+    // Safely remove typing bubble
+    setMessages(prev => {
+      const updated = [...prev];
+
+      if (
+        updated.length > 0 &&
+        updated[updated.length - 1].typing
+      ) {
+        updated.pop();
+      }
+
+      return updated;
+    });
+
     setIsGenerating(false);
   };
 
