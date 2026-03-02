@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import Landing from "./Landing";
 import MessageInput from "./MessageInput";
 import menuIcon from "../assets/menu.png";
@@ -7,17 +7,20 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
   const messageInputRef = useRef(null);
 
+  // Add debugging
+  useEffect(() => {
+    console.log("ChatWindow received messages:", messages);
+    console.log("Type of messages:", typeof messages);
+    console.log("Is messages an array?", Array.isArray(messages));
+    console.log("setMessages type:", typeof setMessages);
+  }, [messages, setMessages]);
+
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
 
-  // Safely handle messages - ensure it's an array
+  // Safely handle messages - if it's not an array, default to empty array
   const safeMessages = Array.isArray(messages) ? messages : [];
-  
-  // Also ensure setMessages is a function (for debugging)
-  if (typeof setMessages !== 'function') {
-    console.error('setMessages is not a function:', setMessages);
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -61,9 +64,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                   </div>
                 ) : (
                   <div className="whitespace-pre-wrap">
-                    {msg && msg.content ? 
-                      (typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)) 
-                      : 'No content'}
+                    {msg && msg.content ? msg.content : JSON.stringify(msg)}
                   </div>
                 )}
               </div>
