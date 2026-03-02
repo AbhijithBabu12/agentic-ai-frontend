@@ -2,7 +2,7 @@ export default function SentEmailsPanel({ show, onClose, sentEmails }) {
   return (
     <div
       className={`
-        fixed top-0 right-0 h-full w-full md:w-96 bg-white shadow-xl border-l
+        fixed top-0 right-0 h-full w-96 bg-white shadow-xl border-l
         transform transition-transform duration-300 z-50
         ${show ? "translate-x-0" : "translate-x-full"}
       `}

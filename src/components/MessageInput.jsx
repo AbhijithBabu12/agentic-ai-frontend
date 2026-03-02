@@ -139,11 +139,20 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
           type="button"
           onClick={() => sendMessage()}
           disabled={!input.trim()}
-          className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full shadow transition"
-        >
+          className={`
+    absolute right-3 top-1/2 -translate-y-1/2
+    p-3 rounded-full shadow-md transition-all duration-200
+    flex items-center justify-center
+    ${
+      input.trim()
+        ? "bg-indigo-600 hover:bg-indigo-700 text-white scale-100 active:scale-95"
+        : "bg-gray-300 text-gray-500 cursor-not-allowed scale-95"
+    }
+  `}
+>
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5"
+            className="w-5 h-5 transition-transform duration-200"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
