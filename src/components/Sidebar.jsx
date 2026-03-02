@@ -68,7 +68,7 @@ export default function Sidebar({
   "
 >
   <img
-    src="/src/assets/sent.png"
+    src={sent}
     alt="Sent Emails"
     className="w-5 h-5"
   />
