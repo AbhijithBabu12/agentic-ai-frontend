@@ -13,7 +13,8 @@ export default function App() {
 
   const [activeChatId, setActiveChatId] = useState(1);
 
-  const activeChat = chats.find(chat => chat.id === activeChatId);
+  const activeChat =
+  chats.find(chat => chat.id === activeChatId) || chats[0];
 
   // ✅ Create New Chat
   const createNewChat = () => {
@@ -98,7 +99,7 @@ export default function App() {
         }`}
       >
         <ChatWindow
-          messages={activeChat.messages}
+          messages={activeChat?.messages || []}
           setMessages={updateMessages}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
