@@ -161,7 +161,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M5 12h14M13 5l7 7-7 7"
+              d="M12 19V5m0 0l-7 7m7-7l7 7"
             />
           </svg>
         </button>
