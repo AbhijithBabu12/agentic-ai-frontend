@@ -12,7 +12,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
     messageInputRef.current?.sendExternalMessage(text);
   };
 
-  const handleEmailAction = async (draftId, action) => {
+  const handleEmailAction = async (draftId, action, editText = null) => {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -23,7 +23,8 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             draft_id: draftId,
-            action: action
+            action: action,
+            edit_text: editText
           })
         }
       );
@@ -121,8 +122,11 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                       </button>
 
                       <button
-                        onClick={() => handleEmailAction(msg.draftId, "edit")}
-                        className="bg-gray-200 px-4 py-2 rounded-xl"
+                      onClick={() => {
+  const instruction = prompt("What would you like to change?");
+  if (!instruction) return;
+  handleEmailAction(msg.draftId, "edit", instruction);
+}}
                       >
                         Edit
                       </button>
