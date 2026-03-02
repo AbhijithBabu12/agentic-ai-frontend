@@ -46,17 +46,22 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
 
-        if (data.type === "email") {
-          setMessages([
-            ...baseMessages,
-            { role: "assistant", type: "email", emailData: data }
-          ]);
-        } else {
-          setMessages([
-            ...baseMessages,
-            { role: "assistant", content: data.message }
-          ]);
-        }
+      if (data.type === "email") {
+  setMessages([
+    ...baseMessages,
+    {
+      role: "assistant",
+      type: "email",
+      emailData: {
+        to: data.to,
+        subject: data.subject,
+        body: data.body
+      }
+    }
+  ]);
+  setIsGenerating(false);
+  return;
+}
 
         setIsGenerating(false);
         return;
