@@ -9,12 +9,11 @@ export default function Landing({ onQuickAction }) {
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 text-center">
-
-      <img
-        src={logo}
-        alt="logo"
-        className="w-24 h-24 object-contain"
-      />
+    
+    <img
+  src={logo}
+  alt="logo"
+  className="w-[120px] h-[120px] object-contain"
 
       <h1 className="text-4xl font-bold mb-4">
         Your AI Assistant
