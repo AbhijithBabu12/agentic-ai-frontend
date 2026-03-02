@@ -184,13 +184,30 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                       >
                         Send
                       </button>
+                      <button
+  onClick={() => {
+    setMessages(prev => prev.filter((_, index) => index !== i));
+  }}
+  className="bg-red-200 px-4 py-2 rounded-xl hover:bg-red-300"
+>
+  Cancel
+</button>
 
                       <button
-                        onClick={() => handleImproveEmail(i, msg.emailData)}
-                        className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300"
-                      >
-                        Improve
-                      </button>
+  onClick={() => {
+    const updatedBody = prompt("Edit email body:", msg.emailData.body);
+    if (!updatedBody) return;
+
+    setMessages(prev => {
+      const copy = [...prev];
+      copy[i].emailData.body = updatedBody;
+      return copy;
+    });
+  }}
+  className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300"
+>
+  Edit
+</button>
 
                     </div>
 
