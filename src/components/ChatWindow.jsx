@@ -13,54 +13,46 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
-
   const handleSendEmail = async (emailData) => {
-    try {
+  try {
 
-      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-      if (!backendUrl) {
-        console.error("Backend URL missing");
-        return;
-      }
-
-      const response = await fetch(
-        `${backendUrl}/send-email`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(emailData)
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Send failed");
-      }
-
-      // ✅ Safe state update
-      setMessages(prev => {
-        const arr = Array.isArray(prev) ? prev : [];
-        return [
-          ...arr,
-          { role: "assistant", content: "✅ Email sent successfully!" }
-        ];
-      });
-
-    } catch (error) {
-
-      console.error("Send error:", error);
-
-      setMessages(prev => {
-        const arr = Array.isArray(prev) ? prev : [];
-        return [
-          ...arr,
-          { role: "assistant", content: "❌ Email send failed." }
-        ];
-      });
+    if (!backendUrl) {
+      console.error("Backend URL missing");
+      alert("Backend URL missing in Vercel environment variables.");
+      return;
     }
-  };
+
+    const response = await fetch(
+      backendUrl + "/send-email",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailData)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error || "Send failed");
+    }
+
+    setMessages(prev => [
+      ...(Array.isArray(prev) ? prev : []),
+      { role: "assistant", content: "✅ Email sent successfully!" }
+    ]);
+
+  } catch (error) {
+    console.error("Send error:", error);
+
+    setMessages(prev => [
+      ...(Array.isArray(prev) ? prev : []),
+      { role: "assistant", content: "❌ Email send failed." }
+    ]);
+  }
+};
 
   return (
     <div className="flex flex-col h-full">
