@@ -26,8 +26,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
             className="w-10 h-10 rounded-full object-cover shadow-sm"
           />
         </button>
-
-        <h2 className="ml-4 font-semibold text-gray-700">
+        <h2 className="font-semibold text-gray-700">
           Chat
         </h2>
       </div>
