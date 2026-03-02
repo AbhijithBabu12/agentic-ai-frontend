@@ -1,3 +1,4 @@
+import sent2 from "../assets/sent2.png";
 export default function SentEmailsPanel({ show, onClose, sentEmails }) {
   return (
     <div
@@ -9,7 +10,24 @@ export default function SentEmailsPanel({ show, onClose, sentEmails }) {
     >
       {/* Header */}
       <div className="p-6 flex justify-between items-center border-b">
-        <h2 className="text-xl font-semibold">📧 Sent Emails</h2>
+        <button
+  onClick={() => setShowEmails(true)}
+  className="
+    w-14 h-14
+    bg-white shadow-lg
+    rounded-full
+    flex items-center justify-center
+    transition-all duration-200
+    hover:bg-indigo-600 hover:scale-105
+    group
+  "
+>
+  <img
+    src={sent2}
+    alt="Sent Emails"
+    className="w-10 h-10 transition-all duration-200 group-hover:invert"
+  />
+</button>
         <button onClick={onClose} className="text-lg">✖</button>
       </div>
 

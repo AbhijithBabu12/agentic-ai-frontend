@@ -76,13 +76,13 @@ export default function Sidebar({
     <img
       src={sent}
       alt="Sent Emails"
-      className="w-8 h-8 transition-all duration-200 group-hover:invert"
+      className="w-10 h-10 transition-all duration-200 group-hover:invert"
     />
   </button>
 
   {/* Text Outside Button */}
   <span className="font-medium text-gray-700">
-    Sent Emails
+    Emails
   </span>
 
 </div>
