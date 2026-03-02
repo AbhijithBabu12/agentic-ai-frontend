@@ -11,10 +11,13 @@ export default function Sidebar({
 }) {
   return (
     <div
-      className={`fixed top-0 left-0 h-full w-64 bg-white border-r p-5 flex flex-col justify-between transform transition-transform duration-300 z-20 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
-    >
+  className={`
+    fixed md:relative
+    top-0 left-0 h-full w-64 bg-white shadow-lg
+    transform transition-transform duration-300 z-40
+    ${isOpen ? "translate-x-0" : "-translate-x-full"}
+  `}
+>
       <div>
         <button
           onClick={createNewChat}
