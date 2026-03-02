@@ -11,6 +11,11 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
     messageInputRef.current?.sendExternalMessage(text);
   };
 
+  const handleCancel = (msgIndex) => {
+    // Remove the email message from the chat
+    setMessages(prev => prev.filter((_, index) => index !== msgIndex));
+  };
+
   return (
     <div className="flex flex-col h-full">
 
@@ -26,14 +31,13 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
             className="w-10 h-10 rounded-full object-cover shadow-sm"
           />
         </button>
-        <h2 className="font-semibold text-gray-700">
+        <h2 className="font-semibold text-gray-700 ml-2">
           Chat
         </h2>
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 overflow-y-auto p-8 bg-gray-100">
-
         {messages.length === 0 ? (
           <Landing onQuickAction={handleQuickAction} />
         ) : (
@@ -48,143 +52,146 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                 }`}
               >
                 {msg.typing ? (
-  <div className="flex items-center gap-2">
-    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></span>
-    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>
-    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-300"></span>
-  </div>
-  ) : msg.type === "email" ? (
-  <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></span>
+                    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>
+                    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-300"></span>
+                  </div>
+                ) : msg.type === "email" ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-500">
+                      To: {msg.emailData.to || msg.emailData.recipient_email || "No recipient"}
+                    </p>
 
-    <p className="text-sm text-gray-500">
-      To: {msg.emailData.to}
-    </p>
+                    <p className="font-semibold">
+                      Subject: {msg.emailData.subject}
+                    </p>
 
-    <p className="font-semibold">
-      Subject: {msg.emailData.subject}
-    </p>
+                    <div className="whitespace-pre-wrap text-gray-700">
+                      {msg.emailData.body}
+                    </div>
 
-    <div className="whitespace-pre-wrap text-gray-700">
-      {msg.emailData.body}
-    </div>
+                    <div className="flex gap-3 pt-3">
 
-    <div className="flex gap-3 pt-3">
+                      {/* ================= SEND ================= */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(
+                              `${import.meta.env.VITE_BACKEND_URL}/send-email`,
+                              {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  to: msg.emailData.to || msg.emailData.recipient_email,
+                                  subject: msg.emailData.subject,
+                                  body: msg.emailData.body
+                                })
+                              }
+                            );
 
-      {/* ================= SEND ================= */}
-      <button
-      onClick={async () => {
-  try {
+                            if (!response.ok) {
+                              const text = await response.text();
+                              setMessages(prev => [
+                                ...prev,
+                                { role: "assistant", content: `❌ Send failed: ${text}` }
+                              ]);
+                              return;
+                            }
 
-    const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/send-email`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: msg.emailData.to,
-          subject: msg.emailData.subject,
-          body: msg.emailData.body
-        })
-      }
-    );
+                            setMessages(prev => [
+                              ...prev,
+                              { role: "assistant", content: "✅ Email sent successfully!" }
+                            ]);
+                          } catch (error) {
+                            console.error("Send error:", error);
+                            setMessages(prev => [
+                              ...prev,
+                              { role: "assistant", content: "❌ Send failed: Network error" }
+                            ]);
+                          }
+                        }}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700"
+                      >
+                        Send
+                      </button>
 
-    if (!response.ok) {
-      const text = await response.text();
-      setMessages(prev => [
-        ...prev,
-        { role: "assistant", content: `❌ Send failed: ${text}` }
-      ]);
-      return;
-    }
+                      {/* ================= IMPROVE ================= */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(
+                              `${import.meta.env.VITE_BACKEND_URL}/edit-email`,
+                              {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  original_body: msg.emailData.body,
+                                  edit_instruction: "Improve this email and make it more polished"
+                                })
+                              }
+                            );
 
-    setMessages(prev => [
-      ...prev,
-      { role: "assistant", content: "✅ Email sent successfully!" }
-    ]);
+                            if (!response.ok) {
+                              const text = await response.text();
+                              setMessages(prev => [
+                                ...prev,
+                                { role: "assistant", content: `❌ Edit failed: ${text}` }
+                              ]);
+                              return;
+                            }
 
-  } catch (error) {
-    console.error("Send error:", error);
-  }
-}}
-        className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700"
-      >
-        Send
-      </button>
+                            if (!response.body) {
+                              return;
+                            }
 
-      {/* ================= IMPROVE ================= */}
-      <button
-      onClick={async () => {
-  try {
+                            const reader = response.body.getReader();
+                            const decoder = new TextDecoder();
 
-    const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/edit-email`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          original_body: msg.emailData.body,
-          edit_instruction: "Improve this email and make it more polished"
-        })
-      }
-    );
+                            let updated = "";
 
-    if (!response.ok) {
-      const text = await response.text();
-      setMessages(prev => [
-        ...prev,
-        { role: "assistant", content: `❌ Edit failed: ${text}` }
-      ]);
-      return;
-    }
+                            while (true) {
+                              const { done, value } = await reader.read();
+                              if (done) break;
 
-    if (!response.body) {
-      return;
-    }
+                              updated += decoder.decode(value, { stream: true });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+                              // Update the specific email message
+                              setMessages(prev => {
+                                const newMessages = [...prev];
+                                if (newMessages[i]) {
+                                  newMessages[i] = {
+                                    ...newMessages[i],
+                                    emailData: {
+                                      ...newMessages[i].emailData,
+                                      body: updated
+                                    }
+                                  };
+                                }
+                                return newMessages;
+                              });
+                            }
+                          } catch (error) {
+                            console.error("Edit error:", error);
+                          }
+                        }}
+                        className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300"
+                      >
+                        Improve
+                      </button>
 
-    let updated = "";
-
-    // get index of this email message
-    const emailIndex = messages.findIndex(m => m === msg);
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      updated += decoder.decode(value, { stream: true });
-
-      setMessages(prev => {
-        const copy = [...prev];
-
-        copy[emailIndex] = {
-          ...copy[emailIndex],
-          emailData: {
-            ...copy[emailIndex].emailData,
-            body: updated
-          }
-        };
-
-        return copy;
-      });
-    }
-
-  } catch (error) {
-    console.error("Edit error:", error);
-  }
-}}
-        className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300"
-      >
-        Improve
-      </button>
-
-    </div>
-  </div>
-
-) : (
-  msg.content
-)}
+                      {/* ================= CANCEL ================= */}
+                      <button
+                        onClick={() => handleCancel(i)}
+                        className="bg-red-100 text-red-600 px-4 py-2 rounded-xl hover:bg-red-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                )}
               </div>
             ))}
           </div>
@@ -199,7 +206,6 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
           messages={messages}
         />
       </div>
-
     </div>
   );
 }
