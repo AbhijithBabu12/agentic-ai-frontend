@@ -45,7 +45,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar, setSe
               to: draft.emailData.to,
               subject: draft.emailData.subject,
               body: draft.emailData.body,
-              date: new Date().toLocalString()
+              date: new Date().toLocaleString()
             },
             ...prev
           ]);
