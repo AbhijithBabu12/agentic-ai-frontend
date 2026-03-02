@@ -1,5 +1,3 @@
-console.log("NEW MESSAGE INPUT VERSION LOADED");
-
 import {
   useState,
   useRef,
@@ -7,8 +5,7 @@ import {
   useImperativeHandle
 } from "react";
 
-const MessageInput = forwardRef(({ setMessages }, ref) => {
-
+const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef(null);
@@ -21,24 +18,27 @@ const MessageInput = forwardRef(({ setMessages }, ref) => {
   }));
 
   const sendMessage = async (externalText = null) => {
-
     const textToSend = externalText || input;
+
     if (!textToSend.trim() || isGenerating) return;
 
-    // Add user message
-    setMessages(prev => [
-      ...prev,
-      { role: "user", content: textToSend }
-    ]);
+    const userMessage = { role: "user", content: textToSend };
+    const updatedMessages = [...messages, userMessage];
 
+    setMessages(updatedMessages);
     setInput("");
     setIsGenerating(true);
+
+    // Show typing bubble
+    setMessages([
+      ...updatedMessages,
+      { role: "assistant", typing: true }
+    ]);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/message`,
         {
@@ -49,52 +49,20 @@ const MessageInput = forwardRef(({ setMessages }, ref) => {
         }
       );
 
-      const contentType = response.headers.get("content-type");
-
-      // ----------------------------
-      // ✅ EMAIL / ERROR MODE (JSON)
-      // ----------------------------
-      if (contentType && contentType.includes("application/json")) {
-
-        const data = await response.json();
-
-        if (data.type === "email") {
-          setMessages(prev => [
-            ...prev,
-            {
-              role: "assistant",
-              type: "email",
-              emailData: data
-            }
-          ]);
-        } else if (data.type === "error") {
-          setMessages(prev => [
-            ...prev,
-            {
-              role: "assistant",
-              content: `⚠️ ${data.message}`
-            }
-          ]);
-        }
-
+      if (!response.ok) {
+        const errorData = await response.json();
+        setMessages([
+          ...updatedMessages,
+          { role: "assistant", content: `⚠️ ${errorData.error}` }
+        ]);
         setIsGenerating(false);
         return;
       }
-
-      // ----------------------------
-      // ✅ STREAM MODE (CHAT ONLY)
-      // ----------------------------
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
 
       let assistantMessage = "";
-
-      // Add typing bubble safely
-      setMessages(prev => [
-        ...prev,
-        { role: "assistant", typing: true }
-      ]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -102,55 +70,27 @@ const MessageInput = forwardRef(({ setMessages }, ref) => {
 
         assistantMessage += decoder.decode(value, { stream: true });
 
-        setMessages(prev => {
-          const updated = [...prev];
-
-          // SAFETY CHECK
-          if (
-            updated.length > 0 &&
-            updated[updated.length - 1].typing
-          ) {
-            updated[updated.length - 1] = {
-              role: "assistant",
-              content: assistantMessage
-            };
-          }
-
-          return updated;
-        });
+        setMessages([
+          ...updatedMessages,
+          { role: "assistant", content: assistantMessage }
+        ]);
       }
 
     } catch (error) {
-
       if (error.name !== "AbortError") {
         console.error("Streaming error:", error);
       }
-
-    } finally {
-      setIsGenerating(false);
     }
+
+    setIsGenerating(false);
   };
 
   const stopGeneration = () => {
-
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Safely remove typing bubble
-    setMessages(prev => {
-      const updated = [...prev];
-
-      if (
-        updated.length > 0 &&
-        updated[updated.length - 1].typing
-      ) {
-        updated.pop();
-      }
-
-      return updated;
-    });
-
+    setMessages(prev => prev.filter(msg => !msg.typing));
     setIsGenerating(false);
   };
 
@@ -176,7 +116,7 @@ const MessageInput = forwardRef(({ setMessages }, ref) => {
 
       {!isGenerating ? (
         <button
-          onClick={() => sendMessage()}
+          onClick={sendMessage}
           disabled={!input.trim()}
           className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full shadow transition ${
             input.trim()
@@ -184,6 +124,7 @@ const MessageInput = forwardRef(({ setMessages }, ref) => {
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
+          {/* Send Icon */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="w-4 h-4"
@@ -200,6 +141,7 @@ const MessageInput = forwardRef(({ setMessages }, ref) => {
           onClick={stopGeneration}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
+          {/* Rotating Loader */}
           <svg
             className="w-4 h-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
