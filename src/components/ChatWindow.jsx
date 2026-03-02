@@ -13,7 +13,8 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
-  const handleSendEmail = async (emailData) => {
+  const handleSendEmail = async (emailData, e) => {
+  if (e) e.preventDefault();
   try {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -55,7 +56,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 };
 
   return (
-    <div className="flex flex-col h-full">
+  <form onSubmit={(e) => e.preventDefault()} className="flex flex-col h-full">
 
       {/* TOP BAR */}
       <div className="flex items-center p-4 border-b bg-white">
@@ -145,12 +146,11 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
                       <button
                         type="button"
-                        onClick={() => handleSendEmail(msg.emailData)}
+                        onClick={() => handleSendEmail(msg.emailData, e)}
                         className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
                       >
                         Send
                       </button>
-
                       <button
                         type="button"
                         onClick={() => {
@@ -190,6 +190,6 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
         />
       </div>
 
-    </div>
+    </form>
   );
 }
