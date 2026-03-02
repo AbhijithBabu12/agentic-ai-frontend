@@ -75,8 +75,9 @@ export default function Sidebar({
     src={sent}
     alt="Sent Emails"
     className="w-6 h-6 transition-all duration-200 group-hover:invert"
-  />Emails
+  />
 </button>
+<h2 className="font-semibold text-gray-700">Chat</h2>
     </div>
   );
 }
