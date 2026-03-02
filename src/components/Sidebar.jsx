@@ -58,27 +58,34 @@ export default function Sidebar({
           </div>
         </div>
       </div>
-      <button
-  onClick={() => setShowEmails(true)}
-  className="
-    fixed bottom-6 left-6
-    w-14 h-14
-    bg-white shadow-lg
-    rounded-full
-    flex items-center justify-center
-    transition-all duration-200
-    hover:bg-indigo-600 hover:scale-105
-    group
-  "
->
-  <img
-    src={sent}
-    alt="Sent Emails"
-    className="w-8 h-8 transition-all duration-200 group-hover:invert"
-  />
-  
-</button>
-<span className="font-medium">Sent Emails</span>
+      <div className="fixed bottom-6 left-6 flex items-center gap-3">
+
+  {/* Circular Button */}
+  <button
+    onClick={() => setShowEmails(true)}
+    className="
+      w-14 h-14
+      bg-white shadow-lg
+      rounded-full
+      flex items-center justify-center
+      transition-all duration-200
+      hover:bg-indigo-600 hover:scale-105
+      group
+    "
+  >
+    <img
+      src={sent}
+      alt="Sent Emails"
+      className="w-8 h-8 transition-all duration-200 group-hover:invert"
+    />
+  </button>
+
+  {/* Text Outside Button */}
+  <span className="font-medium text-gray-700">
+    Sent Emails
+  </span>
+
+</div>
     </div>
   );
 }
