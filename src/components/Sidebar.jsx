@@ -1,3 +1,4 @@
+import sent from "../assets/sent.png";
 export default function Sidebar({
   isOpen,
   toggleSidebar,
@@ -71,10 +72,10 @@ export default function Sidebar({
   "
 >
   <img
-    src="/src/assets/sent.png"
+    src={sent}
     alt="Sent Emails"
     className="w-6 h-6 transition-all duration-200 group-hover:invert"
-  />
+  />Emails
 </button>
     </div>
   );
