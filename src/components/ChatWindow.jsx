@@ -121,24 +121,25 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                     />
 
                     <div className="flex gap-3 pt-2">
-
                       <button
-                        onClick={() => handleSendEmail(msg.emailData)}
-                        className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
-                      >
-                        Send
-                      </button>
+  type="button"
+  onClick={() => handleSendEmail(msg.emailData)}
+  className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
+>
+  Send
+</button>
 
-                      <button
-                        onClick={() => {
-                          setMessages(prev =>
-                            prev.filter((_, index) => index !== i)
-                          );
-                        }}
-                        className="bg-red-200 px-5 py-2 rounded-xl hover:bg-red-300 transition"
-                      >
-                        Remove
-                      </button>
+<button
+  type="button"
+  onClick={() => {
+    setMessages(prev =>
+      prev.filter((_, index) => index !== i)
+    );
+  }}
+  className="bg-red-200 px-5 py-2 rounded-xl hover:bg-red-300 transition"
+>
+  Remove
+</button>
 
                     </div>
 
