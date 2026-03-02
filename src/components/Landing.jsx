@@ -13,7 +13,7 @@ export default function Landing({ onQuickAction }) {
       <img
         src={logo}
         alt="logo"
-        className="w-26 h-26 object-contain"
+        className="w-25 h-25"
       />
 
       <h1 className="text-4xl font-bold mb-4">
