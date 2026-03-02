@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import menuIcon from "../assets/menu.png";
+import menuIcon from "./assets/menu.png";
 
 export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
   const [input, setInput] = useState("");
