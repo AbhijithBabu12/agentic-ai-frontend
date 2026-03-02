@@ -10,7 +10,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef(null);
 
-  // 🔥 Allow Landing to trigger message
   useImperativeHandle(ref, () => ({
     sendExternalMessage: (text) => {
       sendMessage(text);
@@ -18,90 +17,22 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   }));
 
   const sendMessage = async (externalText = null) => {
-  const textToSend = externalText || input;
+    const textToSend = externalText || input;
 
-  if (!textToSend.trim() || isGenerating) return;
+    if (!textToSend.trim() || isGenerating) return;
 
-  const userMessage = { role: "user", content: textToSend };
-  const updatedMessages = [...messages, userMessage];
+    const userMessage = { role: "user", content: textToSend };
+    const updatedMessages = [...messages, userMessage];
 
-  setMessages(updatedMessages);
-  setInput("");
-  setIsGenerating(true);
+    setMessages(updatedMessages);
+    setInput("");
+    setIsGenerating(true);
 
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/message`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: textToSend })
-      }
-    );
-
-    // ✅ HANDLE JSON EMAIL MODE FIRST
-    const contentType = response.headers.get("content-type");
-
-    if (contentType && contentType.includes("application/json")) {
-      const data = await response.json();
-
-      if (data.type === "email") {
-        setMessages([
-          ...updatedMessages,
-          {
-            role: "assistant",
-            type: "email",
-            emailData: data
-          }
-        ]);
-      } else {
-        setMessages([
-          ...updatedMessages,
-          {
-            role: "assistant",
-            content: data.message || "Error"
-          }
-        ]);
-      }
-
-      setIsGenerating(false);
-      return;
-    }
-
-    // ✅ HANDLE STREAM SAFELY
-    if (!response.body) {
-      const text = await response.text();
-      setMessages([
-        ...updatedMessages,
-        { role: "assistant", content: text }
-      ]);
-      setIsGenerating(false);
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-
-    let assistantMessage = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      assistantMessage += decoder.decode(value, { stream: true });
-
-      setMessages([
-        ...updatedMessages,
-        { role: "assistant", content: assistantMessage }
-      ]);
-    }
-
-  } catch (error) {
-    console.error("Error:", error);
-  }
-
-  setIsGenerating(false);
-};
+    // Show typing bubble
+    setMessages([
+      ...updatedMessages,
+      { role: "assistant", typing: true }
+    ]);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -117,16 +48,47 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      const contentType = response.headers.get("content-type");
+
+      // ✅ HANDLE EMAIL / ERROR JSON MODE
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+
+        if (data.type === "email") {
+          setMessages([
+            ...updatedMessages,
+            {
+              role: "assistant",
+              type: "email",
+              emailData: data
+            }
+          ]);
+        } else {
+          setMessages([
+            ...updatedMessages,
+            {
+              role: "assistant",
+              content: data.message || "Error occurred"
+            }
+          ]);
+        }
+
+        setIsGenerating(false);
+        return;
+      }
+
+      // ✅ SAFETY CHECK (Prevent crash)
+      if (!response.body) {
+        const text = await response.text();
         setMessages([
           ...updatedMessages,
-          { role: "assistant", content: `⚠️ ${errorData.error}` }
+          { role: "assistant", content: text }
         ]);
         setIsGenerating(false);
         return;
       }
 
+      // ✅ STREAM MODE (CHAT)
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
 
@@ -209,28 +171,8 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
           onClick={stopGeneration}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
-          {/* Rotating Loader */}
-          <svg
-            className="w-4 h-4 animate-spin"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-              className="opacity-25"
-            />
-            <path
-              d="M4 12a8 8 0 018-8"
-              stroke="currentColor"
-              strokeWidth="4"
-              className="opacity-75"
-            />
-          </svg>
+          {/* Stop Icon */}
+          ⏹
         </button>
       )}
 
