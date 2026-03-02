@@ -32,8 +32,8 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
       if (data.type === "email_draft") {
         // Edited draft returned
-        setMessages(prev => [
-          ...prev.slice(0, -1),
+        const updatedMessages = [
+          ...safeMessages.slice(0, -1),
           {
             role: "assistant",
             type: "email",
@@ -44,15 +44,18 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
               body: data.body
             }
           }
-        ]);
+        ];
+        setMessages(updatedMessages);
         return;
       }
 
       // success / cancel / error
-      setMessages(prev => [
-        ...prev,
+      const updatedMessages = [
+        ...safeMessages,
         { role: "assistant", content: data.message }
-      ]);
+      ];
+
+      setMessages(updatedMessages);
 
     } catch (error) {
       console.error(error);
