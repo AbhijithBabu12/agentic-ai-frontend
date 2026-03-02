@@ -12,14 +12,14 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
   };
 
   const handleCancel = useCallback((messageId) => {
-    // Remove the email message from the chat using a unique identifier
+    // Remove the email message from the chat
     setMessages(prev => prev.filter((_, index) => index !== messageId));
   }, [setMessages]);
 
   const handleSend = useCallback(async (emailData, messageIndex) => {
     try {
       // Validate email data
-      const recipient = emailData.to || emailData.recipient_email;
+      const recipient = emailData?.to || emailData?.recipient_email;
       if (!recipient) {
         setMessages(prev => [
           ...prev,
@@ -41,7 +41,13 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
         }
       );
 
-      const responseData = await response.json();
+      let responseData;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        responseData = await response.json();
+      } else {
+        responseData = { error: await response.text() };
+      }
 
       if (!response.ok) {
         setMessages(prev => [
@@ -80,10 +86,16 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
       );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        let errorMessage = response.statusText;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // Ignore parsing error
+        }
         setMessages(prev => [
           ...prev,
-          { role: "assistant", content: `❌ Edit failed: ${errorData.error || response.statusText}` }
+          { role: "assistant", content: `❌ Edit failed: ${errorMessage}` }
         ]);
         return;
       }
@@ -100,13 +112,15 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
       const decoder = new TextDecoder();
       let updated = "";
 
-      // Show typing indicator while improving
+      // Show improving state
       setMessages(prev => {
         const newMessages = [...prev];
-        newMessages[messageIndex] = {
-          ...newMessages[messageIndex],
-          improving: true
-        };
+        if (newMessages[messageIndex]) {
+          newMessages[messageIndex] = {
+            ...newMessages[messageIndex],
+            improving: true
+          };
+        }
         return newMessages;
       });
 
@@ -123,7 +137,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
             newMessages[messageIndex] = {
               ...newMessages[messageIndex],
               emailData: {
-                ...newMessages[messageIndex].emailData,
+                ...(newMessages[messageIndex].emailData || {}),
                 body: updated
               },
               improving: false
@@ -143,22 +157,21 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
   // Helper function to safely render email content
   const renderEmailContent = (msg, index) => {
-    if (!msg.emailData) {
-      return <div className="text-red-500">Error: Invalid email data</div>;
-    }
-
+    // Safely access emailData with defaults
+    const emailData = msg.emailData || {};
+    
     return (
       <div className="space-y-3">
         <p className="text-sm text-gray-500">
-          To: {msg.emailData.to || msg.emailData.recipient_email || "No recipient specified"}
+          To: {emailData.to || emailData.recipient_email || "No recipient specified"}
         </p>
 
         <p className="font-semibold">
-          Subject: {msg.emailData.subject || "No subject"}
+          Subject: {emailData.subject || "No subject"}
         </p>
 
         <div className="whitespace-pre-wrap text-gray-700">
-          {msg.emailData.body || "No content"}
+          {emailData.body || "No content"}
         </div>
 
         {msg.improving && (
@@ -170,7 +183,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
         <div className="flex gap-3 pt-3">
           <button
-            onClick={() => handleSend(msg.emailData, index)}
+            onClick={() => handleSend(emailData, index)}
             disabled={msg.improving}
             className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -178,7 +191,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
           </button>
 
           <button
-            onClick={() => handleImprove(msg.emailData, index)}
+            onClick={() => handleImprove(emailData, index)}
             disabled={msg.improving}
             className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -224,14 +237,14 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
           <div className="space-y-4 max-w-3xl mx-auto">
             {messages.map((msg, index) => (
               <div
-                key={`msg-${index}-${msg.role}`}
+                key={`msg-${index}-${msg.role}-${Date.now()}`}
                 className={`px-4 py-3 rounded-2xl w-fit max-w-xl ${
                   msg.role === "user"
                     ? "bg-indigo-600 text-white ml-auto"
                     : "bg-white shadow"
                 }`}
               >
-                {msg.typing ? (
+                {msg.typing && !msg.type ? (
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></span>
                     <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>

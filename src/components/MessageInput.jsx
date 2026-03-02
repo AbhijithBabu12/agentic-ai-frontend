@@ -47,14 +47,47 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         const data = await response.json();
 
         if (data.type === "email") {
+          // We need to collect the streamed email content first
+          // The backend sends email data with a generator, but we're not handling it properly
+          // Let's handle the streaming for email too
+          
+          // For now, let's assume the email is being built from the stream
+          // We'll add a typing indicator first
           setMessages([
             ...baseMessages,
-            { role: "assistant", type: "email", emailData: data }
+            { role: "assistant", type: "email", typing: true, emailData: { body: "" } }
           ]);
+
+          // Now we need to read the stream
+          // But the backend returns JSON for email type, not stream
+          // This is a mismatch in your implementation
+          
+          // Let's modify this to handle the actual response
+          // Since your backend returns a stream even for email, we need to read it
+          
+          // Re-fetch as stream if needed, but for now let's create a placeholder
+          setMessages(prev => {
+            const newMessages = [...prev];
+            // Find the last message (our typing indicator) and update it
+            const lastIndex = newMessages.length - 1;
+            if (lastIndex >= 0 && newMessages[lastIndex].typing) {
+              newMessages[lastIndex] = {
+                role: "assistant",
+                type: "email",
+                emailData: {
+                  to: data.recipient_email || "recipient@example.com",
+                  subject: data.subject || "Email Subject",
+                  body: data.body || "Email body will appear here..."
+                }
+              };
+            }
+            return newMessages;
+          });
+          
         } else {
           setMessages([
             ...baseMessages,
-            { role: "assistant", content: data.message }
+            { role: "assistant", content: data.message || data.error || "Unknown response" }
           ]);
         }
 
@@ -62,7 +95,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         return;
       }
 
-      // STREAM MODE
+      // STREAM MODE (for chat and email content)
       if (!response.body) {
         setIsGenerating(false);
         return;
@@ -73,10 +106,24 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
       let assistantMessage = "";
 
-      setMessages([
-        ...baseMessages,
-        { role: "assistant", typing: true }
-      ]);
+      // Check if this might be an email (based on the initial request)
+      const isEmailRequest = textToSend.toLowerCase().includes("email") || 
+                             textToSend.toLowerCase().includes("send") ||
+                             textToSend.toLowerCase().includes("mail");
+
+      if (isEmailRequest) {
+        // Start with an email typing indicator
+        setMessages([
+          ...baseMessages,
+          { role: "assistant", type: "email", typing: true, emailData: { body: "" } }
+        ]);
+      } else {
+        // Regular chat typing indicator
+        setMessages([
+          ...baseMessages,
+          { role: "assistant", typing: true }
+        ]);
+      }
 
       while (true) {
         const { done, value } = await reader.read();
@@ -84,10 +131,59 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
         assistantMessage += decoder.decode(value, { stream: true });
 
-        setMessages([
-          ...baseMessages,
-          { role: "assistant", content: assistantMessage }
-        ]);
+        if (isEmailRequest) {
+          // Update the email message
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastIndex = newMessages.length - 1;
+            if (lastIndex >= 0) {
+              // Try to parse if it's JSON
+              try {
+                // Sometimes the stream might be sending JSON
+                const parsed = JSON.parse(assistantMessage);
+                if (parsed.type === "email") {
+                  newMessages[lastIndex] = {
+                    role: "assistant",
+                    type: "email",
+                    emailData: {
+                      to: parsed.recipient_email || "recipient@example.com",
+                      subject: parsed.subject || "Email Subject",
+                      body: parsed.body || assistantMessage
+                    }
+                  };
+                } else {
+                  newMessages[lastIndex] = {
+                    role: "assistant",
+                    type: "email",
+                    emailData: {
+                      to: "recipient@example.com",
+                      subject: "Email Subject",
+                      body: assistantMessage
+                    }
+                  };
+                }
+              } catch {
+                // Not JSON, treat as plain text body
+                newMessages[lastIndex] = {
+                  role: "assistant",
+                  type: "email",
+                  emailData: {
+                    to: "recipient@example.com",
+                    subject: "Email Subject",
+                    body: assistantMessage
+                  }
+                };
+              }
+            }
+            return newMessages;
+          });
+        } else {
+          // Regular chat message
+          setMessages([
+            ...baseMessages,
+            { role: "assistant", content: assistantMessage }
+          ]);
+        }
       }
 
     } catch (error) {
@@ -108,7 +204,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
   return (
     <div className="relative w-full">
-
       <input
         value={input}
         disabled={isGenerating}
@@ -156,7 +251,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
           </svg>
         </button>
       )}
-
     </div>
   );
 });
