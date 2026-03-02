@@ -76,8 +76,9 @@ export default function Sidebar({
     alt="Sent Emails"
     className="w-8 h-8 transition-all duration-200 group-hover:invert"
   />
-  <span className="font-medium">Sent Emails</span>
+  
 </button>
+<span className="font-medium">Sent Emails</span>
     </div>
   );
 }
