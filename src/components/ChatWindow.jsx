@@ -13,17 +13,9 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
-  const handleSendEmail = async (emailData, e) => {
-  if (e) e.preventDefault();
+  const handleSendEmail = async (emailData) => {
   try {
-
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-    if (!backendUrl) {
-      console.error("Backend URL missing");
-      alert("Backend URL missing in Vercel environment variables.");
-      return;
-    }
 
     const response = await fetch(
       backendUrl + "/send-email",
@@ -46,7 +38,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
     ]);
 
   } catch (error) {
-    console.error("Send error:", error);
+    console.error(error);
 
     setMessages(prev => [
       ...(Array.isArray(prev) ? prev : []),
@@ -146,7 +138,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
                       <button
                         type="button"
-                        onClick={() => handleSendEmail(msg.emailData, e)}
+                        onClick={() => handleSendEmail(msg.emailData)}
                         className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
                       >
                         Send
