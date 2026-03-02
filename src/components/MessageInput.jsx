@@ -6,6 +6,7 @@ import {
   useEffect
 } from "react";
 
+
 const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
   const [input, setInput] = useState("");
@@ -18,6 +19,8 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
   const sendMessage = async (externalText = null) => {
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     const textToSend = externalText || input;
     if (!textToSend.trim() || isGenerating) return;
 
@@ -35,7 +38,8 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: textToSend })
+          body: JSON.stringify({ message: textToSend }),
+          signal: controller.signal
         }
       );
 
@@ -99,7 +103,11 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       }
 
     } catch (error) {
-      console.error(error);
+      if (error.name === 'AbortError') {
+        console.log("Generation stopped");
+      } else {
+        console.error(error);
+      }
     }
 
     setIsGenerating(false);
