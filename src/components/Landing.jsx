@@ -4,7 +4,6 @@ export default function Landing({ onQuickAction }) {
 
   const quickActions = [
     "What can you do?",
-    "Send an email",
     "Tell me a fun fact"
   ];
 

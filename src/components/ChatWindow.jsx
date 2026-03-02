@@ -53,6 +53,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
     <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>
     <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-300"></span>
   </div>
+
   ) : msg.type === "email" ? (
   <div className="space-y-3">
 
@@ -68,12 +69,12 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
       {msg.emailData.body}
     </div>
 
-    {/* ACTION BUTTONS */}
-    <div className="flex gap-3 pt-2">
+    <div className="flex gap-3 pt-3">
 
-      {/* SEND BUTTON */}
+      {/* SEND */}
       <button
         onClick={async () => {
+
           await fetch(`${import.meta.env.VITE_BACKEND_URL}/send-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -84,31 +85,54 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
             })
           });
 
-          alert("Email sent successfully 🚀");
+          setMessages(prev => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "✅ Email sent successfully!"
+            }
+          ]);
+
         }}
-        className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
+        className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700"
       >
         Send
       </button>
 
-      {/* EDIT BUTTON */}
+      {/* EDIT */}
       <button
-        onClick={() => {
-          const instruction = prompt("How would you like to edit this email?");
-          if (!instruction) return;
+        onClick={async () => {
 
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/edit-email`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              original_body: msg.emailData.body,
-              edit_instruction: instruction
-            })
-          })
-          .then(res => res.text())
-          .then(updated => {
+          setMessages(prev => [
+            ...prev,
+            { role: "assistant", typing: true }
+          ]);
+
+          const response = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/edit-email`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                original_body: msg.emailData.body,
+                edit_instruction: "Improve this email and make it more polished"
+              })
+            }
+          );
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          let updated = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            updated += decoder.decode(value, { stream: true });
+
             setMessages(prev => [
-              ...prev,
+              ...prev.slice(0, -1),
               {
                 role: "assistant",
                 type: "email",
@@ -118,15 +142,17 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                 }
               }
             ]);
-          });
+          }
+
         }}
-        className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300 transition"
+        className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300"
       >
-        Edit
+        Improve
       </button>
 
     </div>
   </div>
+
 ) : (
   msg.content
 )}
