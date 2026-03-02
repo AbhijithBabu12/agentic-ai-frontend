@@ -18,22 +18,90 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   }));
 
   const sendMessage = async (externalText = null) => {
-    const textToSend = externalText || input;
+  const textToSend = externalText || input;
 
-    if (!textToSend.trim() || isGenerating) return;
+  if (!textToSend.trim() || isGenerating) return;
 
-    const userMessage = { role: "user", content: textToSend };
-    const updatedMessages = [...messages, userMessage];
+  const userMessage = { role: "user", content: textToSend };
+  const updatedMessages = [...messages, userMessage];
 
-    setMessages(updatedMessages);
-    setInput("");
-    setIsGenerating(true);
+  setMessages(updatedMessages);
+  setInput("");
+  setIsGenerating(true);
 
-    // Show typing bubble
-    setMessages([
-      ...updatedMessages,
-      { role: "assistant", typing: true }
-    ]);
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/message`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: textToSend })
+      }
+    );
+
+    // ✅ HANDLE JSON EMAIL MODE FIRST
+    const contentType = response.headers.get("content-type");
+
+    if (contentType && contentType.includes("application/json")) {
+      const data = await response.json();
+
+      if (data.type === "email") {
+        setMessages([
+          ...updatedMessages,
+          {
+            role: "assistant",
+            type: "email",
+            emailData: data
+          }
+        ]);
+      } else {
+        setMessages([
+          ...updatedMessages,
+          {
+            role: "assistant",
+            content: data.message || "Error"
+          }
+        ]);
+      }
+
+      setIsGenerating(false);
+      return;
+    }
+
+    // ✅ HANDLE STREAM SAFELY
+    if (!response.body) {
+      const text = await response.text();
+      setMessages([
+        ...updatedMessages,
+        { role: "assistant", content: text }
+      ]);
+      setIsGenerating(false);
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+
+    let assistantMessage = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      assistantMessage += decoder.decode(value, { stream: true });
+
+      setMessages([
+        ...updatedMessages,
+        { role: "assistant", content: assistantMessage }
+      ]);
+    }
+
+  } catch (error) {
+    console.error("Error:", error);
+  }
+
+  setIsGenerating(false);
+};
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
