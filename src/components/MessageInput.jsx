@@ -1,3 +1,4 @@
+console.log("NEW MESSAGE INPUT VERSION LOADED");
 import {
   useState,
   useRef,
