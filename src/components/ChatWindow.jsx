@@ -126,7 +126,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
   const instruction = prompt("What would you like to change?");
   if (!instruction) return;
   handleEmailAction(msg.draftId, "edit", instruction);
-}}
+}}className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
                       >
                         Edit
                       </button>
