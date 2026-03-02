@@ -2,10 +2,12 @@ import { useRef, useState } from "react";
 import Landing from "./Landing";
 import MessageInput from "./MessageInput";
 import menuIcon from "../assets/menu.png";
+import { useRef, useState, useEffect } from "react";
 
 export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
   const messageInputRef = useRef(null);
+  const bottomRef = useRef(null);
   const [editingDraftId, setEditingDraftId] = useState(null);
 
   const safeMessages = Array.isArray(messages) ? messages : [];

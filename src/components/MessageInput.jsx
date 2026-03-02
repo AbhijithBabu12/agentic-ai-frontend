@@ -2,7 +2,8 @@ import {
   useState,
   useRef,
   forwardRef,
-  useImperativeHandle
+  useImperativeHandle,
+  useEffect
 } from "react";
 
 const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
@@ -14,13 +15,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   useImperativeHandle(ref, () => ({
     sendExternalMessage: (text) => sendMessage(text)
   }));
-
-  const stopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    setIsGenerating(false);
-  };
 
   const sendMessage = async (externalText = null) => {
 
@@ -34,9 +28,6 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     setInput("");
     setIsGenerating(true);
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
     try {
 
       const response = await fetch(
@@ -44,19 +35,17 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: textToSend }),
-          signal: controller.signal
+          body: JSON.stringify({ message: textToSend })
         }
       );
 
       const contentType = response.headers.get("content-type") || "";
 
-      // ✅ EMAIL OR JSON RESPONSE
+      // 🔥 EMAIL DRAFT
       if (contentType.includes("application/json")) {
 
         const data = await response.json();
 
-        // EMAIL DRAFT
         if (data.type === "email_draft") {
 
           setMessages([
@@ -73,32 +62,28 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
             }
           ]);
 
-        } else {
-          // error / success / info
+          setIsGenerating(false);
+          return;
+        }
+
+        if (data.type === "error") {
           setMessages([
             ...baseMessages,
             { role: "assistant", content: data.message }
           ]);
+          setIsGenerating(false);
+          return;
         }
-
-        setIsGenerating(false);
-        return;
       }
 
-      // ✅ STREAMING CHAT RESPONSE
-      if (!response.body) {
-        setIsGenerating(false);
-        return;
-      }
-
+      // 🔥 STREAM CHAT
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let assistantMessage = "";
 
-      // Show typing indicator first
       setMessages([
         ...baseMessages,
-        { role: "assistant", typing: true }
+        { role: "assistant", content: "" }
       ]);
 
       while (true) {
@@ -114,11 +99,16 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       }
 
     } catch (error) {
-      if (error.name !== "AbortError") {
-        console.error("Error:", error);
-      }
+      console.error(error);
     }
 
+    setIsGenerating(false);
+  };
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     setIsGenerating(false);
   };
 
@@ -136,14 +126,13 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         }
       />
 
-      {/* SEND BUTTON */}
       {!isGenerating ? (
         <button
-          onClick={sendMessage}
+          type="button"
+          onClick={() => sendMessage()}
           disabled={!input.trim()}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full shadow transition"
         >
-          {/* Arrow SVG */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="w-5 h-5"
@@ -161,10 +150,10 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         </button>
       ) : (
         <button
+          type="button"
           onClick={stopGeneration}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
-          {/* Rotating Spinner */}
           <svg
             className="w-5 h-5 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
