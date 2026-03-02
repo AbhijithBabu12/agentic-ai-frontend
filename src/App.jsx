@@ -4,6 +4,7 @@ import ChatWindow from "./components/ChatWindow";
 import SentEmailsPanel from "./components/SentEmailsPanel";
 
 export default function App() {
+  const [sentEmails, setSentEmails] = useState([]);
   const [showEmails, setShowEmails] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -102,12 +103,14 @@ export default function App() {
           messages={activeChat?.messages || []}
           setMessages={updateMessages}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          setSentEmails = {setSentEmails}
         />
       </div>
 
       <SentEmailsPanel
         show={showEmails}
         onClose={() => setShowEmails(false)}
+        sentEmails = {sentEmails}
       />
     </div>
   );

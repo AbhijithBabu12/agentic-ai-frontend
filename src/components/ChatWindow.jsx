@@ -3,7 +3,7 @@ import Landing from "./Landing";
 import MessageInput from "./MessageInput";
 import menuIcon from "../assets/menu.png";
 
-export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
+export default function ChatWindow({ messages, setMessages, toggleSidebar, setSentEmails}) {
 
   const messageInputRef = useRef(null);
   const [editingDraftId, setEditingDraftId] = useState(null);
@@ -35,7 +35,22 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
       );
 
       const data = await response.json();
+      if (action == 'send' && data.type == 'success') {
+        const draft = safeMessages.find(m => m.draftId == draftId);
 
+        if (draft) {
+          setSentEmails(prev => [
+            {
+              id: draftId,
+              to: draft.emailData.to,
+              subject: draft.emailData.subject,
+              body: draft.emailData.body,
+              date: new Date().toLocalString()
+            },
+            ...prev
+          ]);
+        }
+      }
       const updatedMessages = [
         ...safeMessages,
         { role: "assistant", content: data.message }
