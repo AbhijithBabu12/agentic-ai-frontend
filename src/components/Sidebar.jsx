@@ -57,13 +57,25 @@ export default function Sidebar({
           </div>
         </div>
       </div>
-
       <button
-        onClick={() => setShowEmails(true)}
-        className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition"
-      >
-        📧 Sent Emails
-      </button>
+  onClick={() => setShowEmails(true)}
+  className="
+    fixed bottom-6 left-6
+    w-14 h-14
+    bg-white shadow-lg
+    rounded-full
+    flex items-center justify-center
+    transition-all duration-200
+    hover:bg-indigo-600 hover:scale-105
+    group
+  "
+>
+  <img
+    src="/src/assets/sent.png"
+    alt="Sent Emails"
+    className="w-6 h-6 transition-all duration-200 group-hover:invert"
+  />
+</button>
     </div>
   );
 }
