@@ -2,6 +2,7 @@ import { useRef } from "react";
 import Landing from "./Landing";
 import MessageInput from "./MessageInput";
 import menuIcon from "../assets/menu.png";
+const [editingDraftId, setEditingDraftId] = useState(null);
 
 export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
@@ -108,29 +109,61 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                       <div className="font-semibold">{msg.emailData.subject}</div>
                     </div>
 
-                    <div className="whitespace-pre-wrap border rounded-xl p-4 bg-gray-50">
-                      {msg.emailData.body}
-                    </div>
+                    {editingDraftId === msg.draftId ? (
+
+  <textarea
+    value={msg.emailData.body}
+    onChange={(e) => {
+      const updatedBody = e.target.value;
+
+      const updatedMessages = safeMessages.map(m =>
+        m.draftId === msg.draftId
+          ? {
+              ...m,
+              emailData: {
+                ...m.emailData,
+                body: updatedBody
+              }
+            }
+          : m
+      );
+
+      setMessages(updatedMessages);
+    }}
+    className="w-full h-48 border rounded-xl p-4 resize-none bg-white"
+  />
+
+) : (
+
+  <div className="whitespace-pre-wrap border rounded-xl p-4 bg-gray-50">
+    {msg.emailData.body}
+  </div>
+
+)}
 
                     <div className="flex gap-3">
+                      {editingDraftId === msg.draftId ? (
 
                       <button
-                        onClick={() => handleEmailAction(msg.draftId, "send")}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
+                        onClick={() => setEditingDraftId(null)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-xl"
                       >
-                        Send
+                        Save
                       </button>
-
+                      ) : (
                       <button
-                      onClick={() => {
-  const instruction = prompt("What would you like to change?");
-  if (!instruction) return;
-  handleEmailAction(msg.draftId, "edit", instruction);
-}}className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
+                      onClick = {() => setEditingDraftId(msg.draftId)}
+                      className="bg-gray-200 px-4 py-2 rounded-x1"
                       >
                         Edit
                       </button>
-
+                      )}
+                      <button
+                      onClick={() => handleEmailAction(msg.draftId, "send")}
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
+                      >
+                      Send
+                      </button>
                       <button
                         onClick={() => handleEmailAction(msg.draftId, "cancel")}
                         className="bg-red-200 px-4 py-2 rounded-xl"
