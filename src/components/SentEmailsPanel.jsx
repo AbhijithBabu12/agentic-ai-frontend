@@ -28,6 +28,9 @@ export default function SentEmailsPanel({ show, onClose, sentEmails }) {
     className="w-10 h-10 transition-all duration-200 group-hover:invert"
   />
 </button>
+<span className="font-medium text-gray-700">
+  Emails
+</span>
         <button onClick={onClose} className="text-lg">✖</button>
       </div>
 
