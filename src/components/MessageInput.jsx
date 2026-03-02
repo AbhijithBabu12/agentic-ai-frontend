@@ -30,6 +30,8 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     abortControllerRef.current = controller;
 
     try {
+      console.log("Sending message:", textToSend);
+      
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/message`,
         {
@@ -40,159 +42,77 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         }
       );
 
+      console.log("Response status:", response.status);
+      console.log("Content-Type:", response.headers.get("content-type"));
+
+      // Check if response is JSON
       const contentType = response.headers.get("content-type");
-
-      // EMAIL / ERROR JSON
+      
       if (contentType && contentType.includes("application/json")) {
+        // Handle JSON response
         const data = await response.json();
-
-        if (data.type === "email") {
-          // We need to collect the streamed email content first
-          // The backend sends email data with a generator, but we're not handling it properly
-          // Let's handle the streaming for email too
-          
-          // For now, let's assume the email is being built from the stream
-          // We'll add a typing indicator first
-          setMessages([
-            ...baseMessages,
-            { role: "assistant", type: "email", typing: true, emailData: { body: "" } }
-          ]);
-
-          // Now we need to read the stream
-          // But the backend returns JSON for email type, not stream
-          // This is a mismatch in your implementation
-          
-          // Let's modify this to handle the actual response
-          // Since your backend returns a stream even for email, we need to read it
-          
-          // Re-fetch as stream if needed, but for now let's create a placeholder
-          setMessages(prev => {
-            const newMessages = [...prev];
-            // Find the last message (our typing indicator) and update it
-            const lastIndex = newMessages.length - 1;
-            if (lastIndex >= 0 && newMessages[lastIndex].typing) {
-              newMessages[lastIndex] = {
-                role: "assistant",
-                type: "email",
-                emailData: {
-                  to: data.recipient_email || "recipient@example.com",
-                  subject: data.subject || "Email Subject",
-                  body: data.body || "Email body will appear here..."
-                }
-              };
-            }
-            return newMessages;
-          });
-          
-        } else {
-          setMessages([
-            ...baseMessages,
-            { role: "assistant", content: data.message || data.error || "Unknown response" }
-          ]);
-        }
-
+        console.log("JSON response:", data);
+        
+        // Add a simple assistant message
+        setMessages(prev => [
+          ...prev,
+          { 
+            role: "assistant", 
+            content: typeof data === 'string' ? data : JSON.stringify(data) 
+          }
+        ]);
+        
         setIsGenerating(false);
         return;
       }
 
-      // STREAM MODE (for chat and email content)
+      // Handle stream response
       if (!response.body) {
+        console.error("No response body");
         setIsGenerating(false);
         return;
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
       let assistantMessage = "";
 
-      // Check if this might be an email (based on the initial request)
-      const isEmailRequest = textToSend.toLowerCase().includes("email") || 
-                             textToSend.toLowerCase().includes("send") ||
-                             textToSend.toLowerCase().includes("mail");
-
-      if (isEmailRequest) {
-        // Start with an email typing indicator
-        setMessages([
-          ...baseMessages,
-          { role: "assistant", type: "email", typing: true, emailData: { body: "" } }
-        ]);
-      } else {
-        // Regular chat typing indicator
-        setMessages([
-          ...baseMessages,
-          { role: "assistant", typing: true }
-        ]);
-      }
+      // Add a temporary message
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", typing: true }
+      ]);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         assistantMessage += decoder.decode(value, { stream: true });
+        console.log("Stream chunk:", assistantMessage);
 
-        if (isEmailRequest) {
-          // Update the email message
-          setMessages(prev => {
-            const newMessages = [...prev];
-            const lastIndex = newMessages.length - 1;
-            if (lastIndex >= 0) {
-              // Try to parse if it's JSON
-              try {
-                // Sometimes the stream might be sending JSON
-                const parsed = JSON.parse(assistantMessage);
-                if (parsed.type === "email") {
-                  newMessages[lastIndex] = {
-                    role: "assistant",
-                    type: "email",
-                    emailData: {
-                      to: parsed.recipient_email || "recipient@example.com",
-                      subject: parsed.subject || "Email Subject",
-                      body: parsed.body || assistantMessage
-                    }
-                  };
-                } else {
-                  newMessages[lastIndex] = {
-                    role: "assistant",
-                    type: "email",
-                    emailData: {
-                      to: "recipient@example.com",
-                      subject: "Email Subject",
-                      body: assistantMessage
-                    }
-                  };
-                }
-              } catch {
-                // Not JSON, treat as plain text body
-                newMessages[lastIndex] = {
-                  role: "assistant",
-                  type: "email",
-                  emailData: {
-                    to: "recipient@example.com",
-                    subject: "Email Subject",
-                    body: assistantMessage
-                  }
-                };
-              }
-            }
-            return newMessages;
-          });
-        } else {
-          // Regular chat message
-          setMessages([
-            ...baseMessages,
-            { role: "assistant", content: assistantMessage }
-          ]);
-        }
+        // Update the message
+        setMessages(prev => {
+          const newMessages = [...prev];
+          // Replace the last message (typing indicator) with the actual content
+          newMessages[newMessages.length - 1] = { 
+            role: "assistant", 
+            content: assistantMessage 
+          };
+          return newMessages;
+        });
       }
 
     } catch (error) {
+      console.error("Error in sendMessage:", error);
       if (error.name !== "AbortError") {
-        console.error("Error:", error);
+        setMessages(prev => [
+          ...prev,
+          { role: "assistant", content: `Error: ${error.message}` }
+        ]);
       }
+    } finally {
+      setIsGenerating(false);
     }
-
-    setIsGenerating(false);
   };
 
   const stopGeneration = () => {
