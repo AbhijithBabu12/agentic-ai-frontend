@@ -53,16 +53,78 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
     <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>
     <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-300"></span>
   </div>
-) : msg.type === "email" ? (
-  <div className="space-y-2">
+  ) : msg.type === "email" ? (
+  <div className="space-y-3">
+
     <p className="text-sm text-gray-500">
       To: {msg.emailData.to}
     </p>
+
     <p className="font-semibold">
       Subject: {msg.emailData.subject}
     </p>
+
     <div className="whitespace-pre-wrap text-gray-700">
       {msg.emailData.body}
+    </div>
+
+    {/* ACTION BUTTONS */}
+    <div className="flex gap-3 pt-2">
+
+      {/* SEND BUTTON */}
+      <button
+        onClick={async () => {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/send-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: msg.emailData.to,
+              subject: msg.emailData.subject,
+              body: msg.emailData.body
+            })
+          });
+
+          alert("Email sent successfully 🚀");
+        }}
+        className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
+      >
+        Send
+      </button>
+
+      {/* EDIT BUTTON */}
+      <button
+        onClick={() => {
+          const instruction = prompt("How would you like to edit this email?");
+          if (!instruction) return;
+
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/edit-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              original_body: msg.emailData.body,
+              edit_instruction: instruction
+            })
+          })
+          .then(res => res.text())
+          .then(updated => {
+            setMessages(prev => [
+              ...prev,
+              {
+                role: "assistant",
+                type: "email",
+                emailData: {
+                  ...msg.emailData,
+                  body: updated
+                }
+              }
+            ]);
+          });
+        }}
+        className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300 transition"
+      >
+        Edit
+      </button>
+
     </div>
   </div>
 ) : (
