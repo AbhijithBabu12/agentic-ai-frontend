@@ -1,20 +1,20 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Landing from "./Landing";
 import MessageInput from "./MessageInput";
 import menuIcon from "../assets/menu.png";
 
-
 export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
-  const [editingDraftId, setEditingDraftId] = useState(null);
   const messageInputRef = useRef(null);
+  const [editingDraftId, setEditingDraftId] = useState(null);
+
   const safeMessages = Array.isArray(messages) ? messages : [];
 
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
 
-  const handleEmailAction = async (draftId, action, editText = null) => {
+  const handleEmailAction = async (draftId, action) => {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -25,34 +25,13 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             draft_id: draftId,
-            action: action,
-            edit_text: editText
+            action: action
           })
         }
       );
 
       const data = await response.json();
 
-      if (data.type === "email_draft") {
-        // Edited draft returned
-        const updatedMessages = [
-          ...safeMessages.slice(0, -1),
-          {
-            role: "assistant",
-            type: "email",
-            draftId: data.draft_id,
-            emailData: {
-              to: data.to,
-              subject: data.subject,
-              body: data.body
-            }
-          }
-        ];
-        setMessages(updatedMessages);
-        return;
-      }
-
-      // success / cancel / error
       const updatedMessages = [
         ...safeMessages,
         { role: "assistant", content: data.message }
@@ -112,59 +91,65 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
                     {editingDraftId === msg.draftId ? (
 
-  <textarea
-    value={msg.emailData.body}
-    onChange={(e) => {
-      const updatedBody = e.target.value;
+                      <textarea
+                        value={msg.emailData.body}
+                        onChange={(e) => {
+                          const updatedBody = e.target.value;
 
-      const updatedMessages = safeMessages.map(m =>
-        m.draftId === msg.draftId
-          ? {
-              ...m,
-              emailData: {
-                ...m.emailData,
-                body: updatedBody
-              }
-            }
-          : m
-      );
+                          const updatedMessages = safeMessages.map(m =>
+                            m.draftId === msg.draftId
+                              ? {
+                                  ...m,
+                                  emailData: {
+                                    ...m.emailData,
+                                    body: updatedBody
+                                  }
+                                }
+                              : m
+                          );
 
-      setMessages(updatedMessages);
-    }}
-    className="w-full h-48 border rounded-xl p-4 resize-none bg-white"
-  />
+                          setMessages(updatedMessages);
+                        }}
+                        className="w-full h-48 border rounded-xl p-4 resize-none bg-white"
+                      />
 
-) : (
+                    ) : (
 
-  <div className="whitespace-pre-wrap border rounded-xl p-4 bg-gray-50">
-    {msg.emailData.body}
-  </div>
+                      <div className="whitespace-pre-wrap border rounded-xl p-4 bg-gray-50">
+                        {msg.emailData.body}
+                      </div>
 
-)}
+                    )}
 
                     <div className="flex gap-3">
+
                       {editingDraftId === msg.draftId ? (
 
-                      <button
-                        onClick={() => setEditingDraftId(null)}
-                        className="bg-green-600 text-white px-4 py-2 rounded-xl"
-                      >
-                        Save
-                      </button>
+                        <button
+                          onClick={() => setEditingDraftId(null)}
+                          className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                        >
+                          Save
+                        </button>
+
                       ) : (
-                      <button
-                      onClick = {() => setEditingDraftId(msg.draftId)}
-                      className="bg-gray-200 px-4 py-2 rounded-x1"
-                      >
-                        Edit
-                      </button>
+
+                        <button
+                          onClick={() => setEditingDraftId(msg.draftId)}
+                          className="bg-gray-200 px-4 py-2 rounded-xl"
+                        >
+                          Edit
+                        </button>
+
                       )}
+
                       <button
-                      onClick={() => handleEmailAction(msg.draftId, "send")}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
+                        onClick={() => handleEmailAction(msg.draftId, "send")}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
                       >
-                      Send
+                        Send
                       </button>
+
                       <button
                         onClick={() => handleEmailAction(msg.draftId, "cancel")}
                         className="bg-red-200 px-4 py-2 rounded-xl"
