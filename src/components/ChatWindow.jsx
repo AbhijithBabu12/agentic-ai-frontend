@@ -48,14 +48,26 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                 }`}
               >
                 {msg.typing ? (
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></span>
-                    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>
-                    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-300"></span>
-                  </div>
-                ) : (
-                  msg.content
-                )}
+  <div className="flex items-center gap-2">
+    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce"></span>
+    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-150"></span>
+    <span className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce delay-300"></span>
+  </div>
+) : msg.type === "email" ? (
+  <div className="space-y-2">
+    <p className="text-sm text-gray-500">
+      To: {msg.emailData.to}
+    </p>
+    <p className="font-semibold">
+      Subject: {msg.emailData.subject}
+    </p>
+    <div className="whitespace-pre-wrap text-gray-700">
+      {msg.emailData.body}
+    </div>
+  </div>
+) : (
+  msg.content
+)}
               </div>
             ))}
           </div>
