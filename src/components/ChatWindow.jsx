@@ -7,16 +7,25 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
   const messageInputRef = useRef(null);
 
+  // 🛡 Always protect against non-array
+  const safeMessages = Array.isArray(messages) ? messages : [];
+
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
 
   const handleSendEmail = async (emailData) => {
-
     try {
 
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+      if (!backendUrl) {
+        console.error("Backend URL missing");
+        return;
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/send-email`,
+        `${backendUrl}/send-email`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -24,21 +33,32 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Send failed");
+        throw new Error(data?.error || "Send failed");
       }
 
-      setMessages(prev => [
-        ...prev,
-        { role: "assistant", content: "✅ Email sent successfully!" }
-      ]);
+      // ✅ Safe state update
+      setMessages(prev => {
+        const arr = Array.isArray(prev) ? prev : [];
+        return [
+          ...arr,
+          { role: "assistant", content: "✅ Email sent successfully!" }
+        ];
+      });
 
     } catch (error) {
 
-      setMessages(prev => [
-        ...prev,
-        { role: "assistant", content: "❌ Email send failed." }
-      ]);
+      console.error("Send error:", error);
+
+      setMessages(prev => {
+        const arr = Array.isArray(prev) ? prev : [];
+        return [
+          ...arr,
+          { role: "assistant", content: "❌ Email send failed." }
+        ];
+      });
     }
   };
 
@@ -48,6 +68,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
       {/* TOP BAR */}
       <div className="flex items-center p-4 border-b bg-white">
         <button
+          type="button"
           onClick={toggleSidebar}
           className="p-2 rounded-full hover:bg-gray-100 transition"
         >
@@ -63,12 +84,12 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
       {/* CHAT AREA */}
       <div className="flex-1 overflow-y-auto p-8 bg-gray-100">
 
-        {messages.length === 0 ? (
+        {safeMessages.length === 0 ? (
           <Landing onQuickAction={handleQuickAction} />
         ) : (
           <div className="space-y-4 max-w-3xl mx-auto">
 
-            {messages.map((msg, i) => (
+            {safeMessages.map((msg, i) => (
 
               <div
                 key={i}
@@ -87,59 +108,69 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
                   <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 space-y-5">
 
+                    {/* TO */}
                     <div className="border-b pb-4">
                       <div className="text-sm text-gray-500">To</div>
                       <div className="font-medium text-gray-800">
-                        {msg.emailData.to}
+                        {msg.emailData?.to}
                       </div>
                     </div>
 
+                    {/* SUBJECT */}
                     <div>
                       <div className="text-sm text-gray-500">Subject</div>
                       <div className="font-semibold text-gray-900">
-                        {msg.emailData.subject}
+                        {msg.emailData?.subject}
                       </div>
                     </div>
 
+                    {/* BODY (Editable) */}
                     <textarea
-                      value={msg.emailData.body}
+                      value={msg.emailData?.body || ""}
                       onChange={(e) => {
                         const updated = e.target.value;
+
                         setMessages(prev => {
-                          const copy = [...prev];
-                          copy[i] = {
-                            ...copy[i],
+                          const arr = Array.isArray(prev) ? [...prev] : [];
+                          if (!arr[i]) return arr;
+
+                          arr[i] = {
+                            ...arr[i],
                             emailData: {
-                              ...copy[i].emailData,
+                              ...arr[i].emailData,
                               body: updated
                             }
                           };
-                          return copy;
+
+                          return arr;
                         });
                       }}
                       className="w-full h-48 border rounded-xl p-4 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
                     />
 
+                    {/* ACTIONS */}
                     <div className="flex gap-3 pt-2">
-                      <button
-  type="button"
-  onClick={() => handleSendEmail(msg.emailData)}
-  className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
->
-  Send
-</button>
 
-<button
-  type="button"
-  onClick={() => {
-    setMessages(prev =>
-      prev.filter((_, index) => index !== i)
-    );
-  }}
-  className="bg-red-200 px-5 py-2 rounded-xl hover:bg-red-300 transition"
->
-  Remove
-</button>
+                      <button
+                        type="button"
+                        onClick={() => handleSendEmail(msg.emailData)}
+                        className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
+                      >
+                        Send
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMessages(prev => {
+                            const arr = Array.isArray(prev) ? prev : [];
+                            return arr.filter((_, index) => index !== i);
+                          });
+                        }}
+                        className="bg-red-200 px-5 py-2 rounded-xl hover:bg-red-300 transition"
+                      >
+                        Remove
+                      </button>
 
                     </div>
 
@@ -163,7 +194,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
         <MessageInput
           ref={messageInputRef}
           setMessages={setMessages}
-          messages={messages}
+          messages={safeMessages}
         />
       </div>
 
