@@ -11,7 +11,7 @@ export default function SentEmailsPanel({ show, onClose, sentEmails }) {
       {/* Header */}
       <div className="p-6 flex justify-between items-center border-b">
         <button
-  onClick={() => setShowEmails(true)}
+  onClick={() => onClick={onClose}}
   className="
     w-14 h-14
     bg-white shadow-lg
