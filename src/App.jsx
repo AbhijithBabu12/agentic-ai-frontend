@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState} from "react";
 import menuIcon from "./assets/menu.png";
 
 export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
