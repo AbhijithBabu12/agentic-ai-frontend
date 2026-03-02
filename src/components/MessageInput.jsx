@@ -15,98 +15,112 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
     sendExternalMessage: (text) => sendMessage(text)
   }));
 
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsGenerating(false);
+  };
+
   const sendMessage = async (externalText = null) => {
 
-  const textToSend = externalText || input;
-  if (!textToSend.trim() || isGenerating) return;
+    const textToSend = externalText || input;
+    if (!textToSend.trim() || isGenerating) return;
 
-  const userMessage = { role: "user", content: textToSend };
-  const baseMessages = [...messages, userMessage];
+    const userMessage = { role: "user", content: textToSend };
+    const baseMessages = [...messages, userMessage];
 
-  setMessages(baseMessages);
-  setInput("");
-  setIsGenerating(true);
+    setMessages(baseMessages);
+    setInput("");
+    setIsGenerating(true);
 
-  try {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-    const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/message`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: textToSend })
-      }
-    );
+    try {
 
-    // 🔥 ALWAYS try JSON first
-    const contentType = response.headers.get("content-type") || "";
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/message`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: textToSend }),
+          signal: controller.signal
+        }
+      );
 
-    if (contentType.includes("application/json")) {
+      const contentType = response.headers.get("content-type") || "";
 
-      const data = await response.json();
+      // ✅ EMAIL OR JSON RESPONSE
+      if (contentType.includes("application/json")) {
 
-      console.log("BACKEND RESPONSE:", data); // DEBUG
+        const data = await response.json();
 
-      // EMAIL DRAFT
-      if (data.type === "email_draft") {
+        // EMAIL DRAFT
+        if (data.type === "email_draft") {
 
-        setMessages([
-          ...baseMessages,
-          {
-            role: "assistant",
-            type: "email",
-            draftId: data.draft_id,
-            emailData: {
-              to: data.to,
-              subject: data.subject,
-              body: data.body
+          setMessages([
+            ...baseMessages,
+            {
+              role: "assistant",
+              type: "email",
+              draftId: data.draft_id,
+              emailData: {
+                to: data.to,
+                subject: data.subject,
+                body: data.body
+              }
             }
-          }
-        ]);
+          ]);
+
+        } else {
+          // error / success / info
+          setMessages([
+            ...baseMessages,
+            { role: "assistant", content: data.message }
+          ]);
+        }
 
         setIsGenerating(false);
         return;
       }
 
-      // ERROR
-      if (data.type === "error") {
-        setMessages([
-          ...baseMessages,
-          { role: "assistant", content: data.message }
-        ]);
+      // ✅ STREAMING CHAT RESPONSE
+      if (!response.body) {
         setIsGenerating(false);
         return;
       }
-    }
 
-    // 🔥 OTHERWISE STREAM CHAT
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let assistantMessage = "";
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = "";
 
-    setMessages([
-      ...baseMessages,
-      { role: "assistant", typing: true }
-    ]);
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      assistantMessage += decoder.decode(value, { stream: true });
-
+      // Show typing indicator first
       setMessages([
         ...baseMessages,
-        { role: "assistant", content: assistantMessage }
+        { role: "assistant", typing: true }
       ]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        assistantMessage += decoder.decode(value, { stream: true });
+
+        setMessages([
+          ...baseMessages,
+          { role: "assistant", content: assistantMessage }
+        ]);
+      }
+
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Error:", error);
+      }
     }
 
-  } catch (error) {
-    console.error(error);
-  }
-
-  setIsGenerating(false);
-};
+    setIsGenerating(false);
+  };
 
   return (
     <div className="relative w-full">
@@ -150,7 +164,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
           onClick={stopGeneration}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
-          {/* Rotating Pause/Stop */}
+          {/* Rotating Spinner */}
           <svg
             className="w-5 h-5 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
