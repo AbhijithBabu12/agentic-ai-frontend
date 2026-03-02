@@ -72,46 +72,40 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
       {/* ================= SEND ================= */}
       <button
-        onClick={async () => {
-          try {
+      onClick={async () => {
+  try {
 
-            const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/send-email`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  to: msg.emailData.to,
-                  subject: msg.emailData.subject,
-                  body: msg.emailData.body
-                })
-              }
-            );
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/send-email`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: msg.emailData.to,
+          subject: msg.emailData.subject,
+          body: msg.emailData.body
+        })
+      }
+    );
 
-            if (!response.ok) {
-              const errorText = await response.text();
-              setMessages(prev => [
-                ...prev,
-                { role: "assistant", content: `❌ Send failed: ${errorText}` }
-              ]);
-              return;
-            }
+    if (!response.ok) {
+      const text = await response.text();
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: `❌ Send failed: ${text}` }
+      ]);
+      return;
+    }
 
-            const result = await response.json();
+    setMessages(prev => [
+      ...prev,
+      { role: "assistant", content: "✅ Email sent successfully!" }
+    ]);
 
-            setMessages(prev => [
-              ...prev,
-              { role: "assistant", content: "✅ Email sent successfully!" }
-            ]);
-
-          } catch (error) {
-            console.error("Send error:", error);
-            setMessages(prev => [
-              ...prev,
-              { role: "assistant", content: "❌ Email send failed." }
-            ]);
-          }
-        }}
+  } catch (error) {
+    console.error("Send error:", error);
+  }
+}}
         className="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700"
       >
         Send
@@ -119,78 +113,67 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
       {/* ================= IMPROVE ================= */}
       <button
-        onClick={async () => {
+      onClick={async () => {
+  try {
 
-          try {
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/edit-email`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          original_body: msg.emailData.body,
+          edit_instruction: "Improve this email and make it more polished"
+        })
+      }
+    );
 
-            const response = await fetch(
-              `${import.meta.env.VITE_BACKEND_URL}/edit-email`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  original_body: msg.emailData.body,
-                  edit_instruction: "Improve this email and make it more polished"
-                })
-              }
-            );
+    if (!response.ok) {
+      const text = await response.text();
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: `❌ Edit failed: ${text}` }
+      ]);
+      return;
+    }
 
-            if (!response.ok) {
-              const errorText = await response.text();
-              setMessages(prev => [
-                ...prev,
-                { role: "assistant", content: `❌ Edit failed: ${errorText}` }
-              ]);
-              return;
-            }
+    if (!response.body) {
+      return;
+    }
 
-            if (!response.body) {
-              const text = await response.text();
-              setMessages(prev => [
-                ...prev,
-                { role: "assistant", content: text }
-              ]);
-              return;
-            }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
+    let updated = "";
 
-            let updated = "";
+    // get index of this email message
+    const emailIndex = messages.findIndex(m => m === msg);
 
-            setMessages(prev => [
-              ...prev,
-              { role: "assistant", typing: true }
-            ]);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
+      updated += decoder.decode(value, { stream: true });
 
-              updated += decoder.decode(value, { stream: true });
+      setMessages(prev => {
+        const copy = [...prev];
 
-              setMessages(prev => [
-                ...prev.slice(0, -1),
-                {
-                  role: "assistant",
-                  type: "email",
-                  emailData: {
-                    ...msg.emailData,
-                    body: updated
-                  }
-                }
-              ]);
-            }
-
-          } catch (error) {
-            console.error("Edit error:", error);
-            setMessages(prev => [
-              ...prev,
-              { role: "assistant", content: "❌ Edit failed unexpectedly." }
-            ]);
+        copy[emailIndex] = {
+          ...copy[emailIndex],
+          emailData: {
+            ...copy[emailIndex].emailData,
+            body: updated
           }
+        };
 
-        }}
+        return copy;
+      });
+    }
+
+  } catch (error) {
+    console.error("Edit error:", error);
+  }
+}}
         className="bg-gray-200 px-4 py-2 rounded-xl hover:bg-gray-300"
       >
         Improve
