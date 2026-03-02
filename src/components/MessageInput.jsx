@@ -73,8 +73,101 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
       }
 
       // 🔥 Otherwise assume stream (chat)
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
+      const sendMessage = async (externalText = null) => {
+
+  const textToSend = externalText || input;
+  if (!textToSend.trim() || isGenerating) return;
+
+  const userMessage = { role: "user", content: textToSend };
+  setMessages(prev => [...prev, userMessage]);
+  setInput("");
+  setIsGenerating(true);
+
+  try {
+
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/message`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: textToSend })
+      }
+    );
+
+    const contentType = response.headers.get("content-type");
+
+    // ✅ JSON Mode
+    if (contentType && contentType.includes("application/json")) {
+
+      const data = await response.json();
+
+      if (data.type === "email") {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "assistant",
+            type: "email",
+            emailData: data
+          }
+        ]);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.message || "Error"
+          }
+        ]);
+      }
+
+      setIsGenerating(false);
+      return;
+    }
+
+    // ✅ If no body, just read as text
+    if (!response.body) {
+      const text = await response.text();
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: text }
+      ]);
+      setIsGenerating(false);
+      return;
+    }
+
+    // ✅ Streaming Mode
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+
+    let assistantMessage = "";
+
+    setMessages(prev => [
+      ...prev,
+      { role: "assistant", typing: true }
+    ]);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      assistantMessage += decoder.decode(value, { stream: true });
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "assistant",
+          content: assistantMessage
+        };
+        return updated;
+      });
+    }
+
+  } catch (error) {
+    console.error("Send error:", error);
+  } finally {
+    setIsGenerating(false);
+  }
+};
 
       let assistantMessage = "";
 
