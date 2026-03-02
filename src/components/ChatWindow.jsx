@@ -12,39 +12,50 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
     messageInputRef.current?.sendExternalMessage(text);
   };
 
-  const handleSendEmail = async (emailData) => {
+  const handleEmailAction = async (draftId, action) => {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
       const response = await fetch(
-        backendUrl + "/send-email",
+        backendUrl + "/email-action",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(emailData)
+          body: JSON.stringify({
+            draft_id: draftId,
+            action: action
+          })
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Send failed");
+      const data = await response.json();
+
+      if (data.type === "email_draft") {
+        // Edited draft returned
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          {
+            role: "assistant",
+            type: "email",
+            draftId: data.draft_id,
+            emailData: {
+              to: data.to,
+              subject: data.subject,
+              body: data.body
+            }
+          }
+        ]);
+        return;
       }
 
-      // Remove the email card after sending
-      setMessages(prev => {
-        const arr = Array.isArray(prev) ? [...prev] : [];
-        return [
-          ...arr,
-          { role: "assistant", content: "✅ Email sent successfully!" }
-        ];
-      });
+      // success / cancel / error
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: data.message }
+      ]);
 
     } catch (error) {
       console.error(error);
-
-      setMessages(prev => [
-        ...(Array.isArray(prev) ? prev : []),
-        { role: "assistant", content: "❌ Email send failed." }
-      ]);
     }
   };
 
@@ -85,54 +96,39 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
                     <div>
                       <div className="text-sm text-gray-500">To</div>
-                      <div className="font-medium">{msg.emailData?.to}</div>
+                      <div className="font-medium">{msg.emailData.to}</div>
                     </div>
 
                     <div>
                       <div className="text-sm text-gray-500">Subject</div>
-                      <div className="font-semibold">{msg.emailData?.subject}</div>
+                      <div className="font-semibold">{msg.emailData.subject}</div>
                     </div>
 
-                    <textarea
-                      value={msg.emailData?.body || ""}
-                      onChange={(e) => {
-                        const updated = e.target.value;
-
-                        setMessages(prev => {
-                          const arr = [...prev];
-                          arr[i] = {
-                            ...arr[i],
-                            emailData: {
-                              ...arr[i].emailData,
-                              body: updated
-                            }
-                          };
-                          return arr;
-                        });
-                      }}
-                      className="w-full h-48 border rounded-xl p-4 resize-none"
-                    />
+                    <div className="whitespace-pre-wrap border rounded-xl p-4 bg-gray-50">
+                      {msg.emailData.body}
+                    </div>
 
                     <div className="flex gap-3">
 
                       <button
-                        type="button"
-                        onClick={() => handleSendEmail(msg.emailData)}
+                        onClick={() => handleEmailAction(msg.draftId, "send")}
                         className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
                       >
                         Send
                       </button>
 
                       <button
-                        type="button"
-                        onClick={() => {
-                          setMessages(prev =>
-                            prev.filter((_, index) => index !== i)
-                          );
-                        }}
+                        onClick={() => handleEmailAction(msg.draftId, "edit")}
+                        className="bg-gray-200 px-4 py-2 rounded-xl"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleEmailAction(msg.draftId, "cancel")}
                         className="bg-red-200 px-4 py-2 rounded-xl"
                       >
-                        Remove
+                        Cancel
                       </button>
 
                     </div>

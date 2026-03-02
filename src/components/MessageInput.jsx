@@ -16,6 +16,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
   }));
 
   const sendMessage = async (externalText = null) => {
+
     const textToSend = externalText || input;
     if (!textToSend.trim() || isGenerating) return;
 
@@ -42,32 +43,37 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
       const contentType = response.headers.get("content-type");
 
-      // EMAIL / ERROR JSON
+      // ✅ EMAIL DRAFT (NO STREAMING)
       if (contentType && contentType.includes("application/json")) {
+
         const data = await response.json();
 
-      if (data.type === "email") {
-  setMessages([
-    ...baseMessages,
-    {
-      role: "assistant",
-      type: "email",
-      emailData: {
-        to: data.to,
-        subject: data.subject,
-        body: data.body
-      }
-    }
-  ]);
-  setIsGenerating(false);
-  return;
-}
+        if (data.type === "email_draft") {
+          setMessages([
+            ...baseMessages,
+            {
+              role: "assistant",
+              type: "email",
+              draftId: data.draft_id,
+              emailData: {
+                to: data.to,
+                subject: data.subject,
+                body: data.body
+              }
+            }
+          ]);
+        } else {
+          setMessages([
+            ...baseMessages,
+            { role: "assistant", content: data.message }
+          ]);
+        }
 
         setIsGenerating(false);
         return;
       }
 
-      // STREAM MODE
+      // ✅ CHAT STREAMING
       if (!response.body) {
         setIsGenerating(false);
         return;
@@ -78,6 +84,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
       let assistantMessage = "";
 
+      // Show typing indicator first
       setMessages([
         ...baseMessages,
         { role: "assistant", typing: true }
@@ -125,21 +132,37 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
         }
       />
 
+      {/* SEND BUTTON */}
       {!isGenerating ? (
         <button
           onClick={sendMessage}
           disabled={!input.trim()}
-          className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full shadow"
+          className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full shadow transition"
         >
-          ➤
+          {/* Arrow SVG */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 12h14M13 5l7 7-7 7"
+            />
+          </svg>
         </button>
       ) : (
         <button
           onClick={stopGeneration}
           className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full shadow"
         >
+          {/* Rotating Pause/Stop */}
           <svg
-            className="w-4 h-4 animate-spin"
+            className="w-5 h-5 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
