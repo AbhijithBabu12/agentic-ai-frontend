@@ -9,30 +9,42 @@ export default function SentEmailsPanel({ show, onClose, sentEmails }) {
       `}
     >
       {/* Header */}
-      <div className="p-6 flex justify-between items-center border-b">
-        <button
-  onClick=onClick={onClose}
-  className="
-    w-14 h-14
-    bg-white shadow-lg
-    rounded-full
-    flex items-center justify-center
-    transition-all duration-200
-    hover:bg-indigo-600 hover:scale-105
-    group
-  "
->
-  <img
-    src={sent2}
-    alt="Sent Emails"
-    className="w-10 h-10 transition-all duration-200 group-hover:invert"
-  />
-</button>
-<span className="font-medium text-gray-700">
-  Emails
-</span>
-        <button onClick={onClose} className="text-lg">✖</button>
-      </div>
+    <div className="p-6 flex justify-between items-center border-b">
+
+  {/* Left Side (Icon + Title) */}
+  <div className="flex items-center gap-3">
+
+    <button
+      onClick={onClose}
+      className="
+        w-12 h-12
+        bg-white shadow-md
+        rounded-full
+        flex items-center justify-center
+        transition-all duration-200
+        hover:bg-indigo-600 hover:scale-105
+        group
+      "
+    >
+      <img
+        src={sent2}
+        alt="Sent Emails"
+        className="w-8 h-8 transition-all duration-200 group-hover:invert"
+      />
+    </button>
+
+    <span className="font-medium text-gray-700 text-3x1">
+      Emails
+    </span>
+
+  </div>
+
+  {/* Close X */}
+  <button onClick={onClose} className="text-lg hover:text-red-500 transition">
+    ✖
+  </button>
+
+</div>
 
       {/* Scrollable Content */}
       <div className="h-[calc(100%-80px)] overflow-y-auto p-6 space-y-4">
