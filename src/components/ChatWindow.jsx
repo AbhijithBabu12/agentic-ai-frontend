@@ -6,49 +6,50 @@ import menuIcon from "../assets/menu.png";
 export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
   const messageInputRef = useRef(null);
-
-  // 🛡 Always protect against non-array
   const safeMessages = Array.isArray(messages) ? messages : [];
 
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
   };
+
   const handleSendEmail = async (emailData) => {
-  try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    const response = await fetch(
-      backendUrl + "/send-email",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(emailData)
+      const response = await fetch(
+        backendUrl + "/send-email",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(emailData)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Send failed");
       }
-    );
 
-    const data = await response.json();
+      // Remove the email card after sending
+      setMessages(prev => {
+        const arr = Array.isArray(prev) ? [...prev] : [];
+        return [
+          ...arr,
+          { role: "assistant", content: "✅ Email sent successfully!" }
+        ];
+      });
 
-    if (!response.ok) {
-      throw new Error(data?.error || "Send failed");
+    } catch (error) {
+      console.error(error);
+
+      setMessages(prev => [
+        ...(Array.isArray(prev) ? prev : []),
+        { role: "assistant", content: "❌ Email send failed." }
+      ]);
     }
-
-    setMessages(prev => [
-      ...(Array.isArray(prev) ? prev : []),
-      { role: "assistant", content: "✅ Email sent successfully!" }
-    ]);
-
-  } catch (error) {
-    console.error(error);
-
-    setMessages(prev => [
-      ...(Array.isArray(prev) ? prev : []),
-      { role: "assistant", content: "❌ Email send failed." }
-    ]);
-  }
-};
+  };
 
   return (
-  <form onSubmit={(e) => e.preventDefault()} className="flex flex-col h-full">
+    <div className="flex flex-col h-full">
 
       {/* TOP BAR */}
       <div className="flex items-center p-4 border-b bg-white">
@@ -76,49 +77,29 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
             {safeMessages.map((msg, i) => (
 
-              <div
-                key={i}
-                className={
-                  msg.type === "email"
-                    ? "w-full flex justify-center"
-                    : `px-4 py-3 rounded-2xl w-fit max-w-xl ${
-                        msg.role === "user"
-                          ? "bg-indigo-600 text-white ml-auto"
-                          : "bg-white shadow"
-                      }`
-                }
-              >
+              <div key={i}>
 
                 {msg.type === "email" ? (
 
-                  <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 space-y-5">
+                  <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 space-y-5 mx-auto">
 
-                    {/* TO */}
-                    <div className="border-b pb-4">
+                    <div>
                       <div className="text-sm text-gray-500">To</div>
-                      <div className="font-medium text-gray-800">
-                        {msg.emailData?.to}
-                      </div>
+                      <div className="font-medium">{msg.emailData?.to}</div>
                     </div>
 
-                    {/* SUBJECT */}
                     <div>
                       <div className="text-sm text-gray-500">Subject</div>
-                      <div className="font-semibold text-gray-900">
-                        {msg.emailData?.subject}
-                      </div>
+                      <div className="font-semibold">{msg.emailData?.subject}</div>
                     </div>
 
-                    {/* BODY (Editable) */}
                     <textarea
                       value={msg.emailData?.body || ""}
                       onChange={(e) => {
                         const updated = e.target.value;
 
                         setMessages(prev => {
-                          const arr = Array.isArray(prev) ? [...prev] : [];
-                          if (!arr[i]) return arr;
-
+                          const arr = [...prev];
                           arr[i] = {
                             ...arr[i],
                             emailData: {
@@ -126,32 +107,30 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                               body: updated
                             }
                           };
-
                           return arr;
                         });
                       }}
-                      className="w-full h-48 border rounded-xl p-4 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
+                      className="w-full h-48 border rounded-xl p-4 resize-none"
                     />
 
-                    {/* ACTIONS */}
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-3">
 
                       <button
                         type="button"
                         onClick={() => handleSendEmail(msg.emailData)}
-                        className="bg-indigo-600 text-white px-5 py-2 rounded-xl hover:bg-indigo-700 transition"
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl"
                       >
                         Send
                       </button>
+
                       <button
                         type="button"
                         onClick={() => {
-                          setMessages(prev => {
-                            const arr = Array.isArray(prev) ? prev : [];
-                            return arr.filter((_, index) => index !== i);
-                          });
+                          setMessages(prev =>
+                            prev.filter((_, index) => index !== i)
+                          );
                         }}
-                        className="bg-red-200 px-5 py-2 rounded-xl hover:bg-red-300 transition"
+                        className="bg-red-200 px-4 py-2 rounded-xl"
                       >
                         Remove
                       </button>
@@ -161,7 +140,17 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                   </div>
 
                 ) : (
-                  msg.content
+
+                  <div
+                    className={`px-4 py-3 rounded-2xl w-fit max-w-xl ${
+                      msg.role === "user"
+                        ? "bg-indigo-600 text-white ml-auto"
+                        : "bg-white shadow"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+
                 )}
 
               </div>
@@ -182,6 +171,6 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
         />
       </div>
 
-    </form>
+    </div>
   );
 }
