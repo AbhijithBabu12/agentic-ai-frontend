@@ -17,106 +17,96 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
   const sendMessage = async (externalText = null) => {
 
-    const textToSend = externalText || input;
-    if (!textToSend.trim() || isGenerating) return;
+  const textToSend = externalText || input;
+  if (!textToSend.trim() || isGenerating) return;
 
-    const userMessage = { role: "user", content: textToSend };
-    const baseMessages = [...messages, userMessage];
+  const userMessage = { role: "user", content: textToSend };
+  const baseMessages = [...messages, userMessage];
 
-    setMessages(baseMessages);
-    setInput("");
-    setIsGenerating(true);
+  setMessages(baseMessages);
+  setInput("");
+  setIsGenerating(true);
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+  try {
 
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/message`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: textToSend }),
-          signal: controller.signal
-        }
-      );
-
-      const contentType = response.headers.get("content-type");
-
-      // ✅ EMAIL DRAFT (NO STREAMING)
-      if (contentType && contentType.includes("application/json")) {
-
-        const data = await response.json();
-
-        if (data.type === "email_draft") {
-          setMessages([
-            ...baseMessages,
-            {
-              role: "assistant",
-              type: "email",
-              draftId: data.draft_id,
-              emailData: {
-                to: data.to,
-                subject: data.subject,
-                body: data.body
-              }
-            }
-          ]);
-        } else {
-          setMessages([
-            ...baseMessages,
-            { role: "assistant", content: data.message }
-          ]);
-        }
-
-        setIsGenerating(false);
-        return;
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/message`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: textToSend })
       }
+    );
 
-      // ✅ CHAT STREAMING
-      if (!response.body) {
-        setIsGenerating(false);
-        return;
-      }
+    // 🔥 ALWAYS try JSON first
+    const contentType = response.headers.get("content-type") || "";
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+    if (contentType.includes("application/json")) {
 
-      let assistantMessage = "";
+      const data = await response.json();
 
-      // Show typing indicator first
-      setMessages([
-        ...baseMessages,
-        { role: "assistant", typing: true }
-      ]);
+      console.log("BACKEND RESPONSE:", data); // DEBUG
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        assistantMessage += decoder.decode(value, { stream: true });
+      // EMAIL DRAFT
+      if (data.type === "email_draft") {
 
         setMessages([
           ...baseMessages,
-          { role: "assistant", content: assistantMessage }
+          {
+            role: "assistant",
+            type: "email",
+            draftId: data.draft_id,
+            emailData: {
+              to: data.to,
+              subject: data.subject,
+              body: data.body
+            }
+          }
         ]);
+
+        setIsGenerating(false);
+        return;
       }
 
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        console.error("Error:", error);
+      // ERROR
+      if (data.type === "error") {
+        setMessages([
+          ...baseMessages,
+          { role: "assistant", content: data.message }
+        ]);
+        setIsGenerating(false);
+        return;
       }
     }
 
-    setIsGenerating(false);
-  };
+    // 🔥 OTHERWISE STREAM CHAT
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let assistantMessage = "";
 
-  const stopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    setMessages([
+      ...baseMessages,
+      { role: "assistant", typing: true }
+    ]);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      assistantMessage += decoder.decode(value, { stream: true });
+
+      setMessages([
+        ...baseMessages,
+        { role: "assistant", content: assistantMessage }
+      ]);
     }
-    setIsGenerating(false);
-  };
+
+  } catch (error) {
+    console.error(error);
+  }
+
+  setIsGenerating(false);
+};
 
   return (
     <div className="relative w-full">
