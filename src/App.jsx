@@ -1,135 +1,64 @@
-import { useState, useEffect } from "react";
-import Sidebar from "./components/Sidebar";
-import ChatWindow from "./components/ChatWindow";
-import SentEmailsPanel from "./components/SentEmailsPanel";
+import { useRef } from "react";
+import menuIcon from "../assets/menu.png";
 
-export default function App() {
-  const [showEmails, setShowEmails] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
+  const [input, setInput] = useState("");
 
-  const [chats, setChats] = useState([
-    { id: 1, title: "New Chat", messages: [] }
-  ]);
-
-  const [activeChatId, setActiveChatId] = useState(1);
-
-  // Safely get active chat with a fallback
-  const activeChat = chats.find(chat => chat.id === activeChatId) || chats[0];
-
-  // Update activeChatId if active chat is deleted
-  useEffect(() => {
-    if (!chats.find(chat => chat.id === activeChatId) && chats.length > 0) {
-      setActiveChatId(chats[0].id);
-    }
-  }, [chats, activeChatId]);
-
-  // ✅ Create New Chat
-  const createNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: "New Chat",
-      messages: []
-    };
-    setChats(prev => [...prev, newChat]);
-    setActiveChatId(newChat.id);
-  };
-
-  // ✅ Update Messages + Auto Title
-  const updateMessages = (newMessages) => {
-    // Ensure newMessages is always an array
-    const messagesArray = Array.isArray(newMessages) ? newMessages : [];
+  const sendMessage = () => {
+    if (!input.trim()) return;
     
-    setChats(prevChats =>
-      prevChats.map(chat => {
-        if (chat.id === activeChatId) {
-          let updatedTitle = chat.title;
-
-          // Auto-generate title from first user message
-          if (chat.title === "New Chat" && messagesArray.length > 0) {
-            // Find the first user message
-            const firstUserMessage = messagesArray.find(msg => msg.role === "user");
-            if (firstUserMessage && firstUserMessage.content) {
-              updatedTitle = firstUserMessage.content
-                .split(" ")
-                .slice(0, 5)
-                .join(" ")
-                .substring(0, 30); // Limit title length
-            }
-          }
-
-          return {
-            ...chat,
-            title: updatedTitle,
-            messages: messagesArray
-          };
-        }
-        return chat;
-      })
-    );
+    const newMessages = [
+      ...(Array.isArray(messages) ? messages : []),
+      { role: "user", content: input },
+      { role: "assistant", content: "Echo: " + input }
+    ];
+    
+    setMessages(newMessages);
+    setInput("");
   };
 
-  // Delete chat
-  const deleteChat = (chatId) => {
-    const updatedChats = chats.filter(chat => chat.id !== chatId);
-
-    if (updatedChats.length === 0) {
-      const newChat = { id: Date.now(), title: "New Chat", messages: [] };
-      setChats([newChat]);
-      setActiveChatId(newChat.id);
-    } else {
-      setChats(updatedChats);
-      setActiveChatId(updatedChats[0].id);
-    }
-  };
-
-  // Rename chat
-  const renameChat = (chatId, newTitle) => {
-    setChats(prevChats =>
-      prevChats.map(chat =>
-        chat.id === chatId
-          ? { ...chat, title: newTitle }
-          : chat
-      )
-    );
-  };
-
-  // Debug logging
-  console.log("Active Chat Messages:", activeChat?.messages);
-  console.log("Is Array:", Array.isArray(activeChat?.messages));
+  const safeMessages = Array.isArray(messages) ? messages : [];
 
   return (
-    <div className="h-screen bg-gray-100 relative overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        chats={chats}
-        activeChatId={activeChatId}
-        setActiveChatId={setActiveChatId}
-        createNewChat={createNewChat}
-        deleteChat={deleteChat}
-        renameChat={renameChat}
-        setShowEmails={setShowEmails}
-      />
-
-      {/* Main Chat Area */}
-      <div
-        className={`h-full transition-all duration-300 ${
-          isSidebarOpen ? "ml-64" : "ml-0"
-        }`}
-      >
-        <ChatWindow
-          key={activeChatId} // Force remount when switching chats
-          messages={activeChat?.messages || []}
-          setMessages={updateMessages}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        />
+    <div className="flex flex-col h-full">
+      <div className="flex items-center p-4 border-b bg-white">
+        <button onClick={toggleSidebar} className="p-2 rounded-full hover:bg-gray-100">
+          <img src={menuIcon} alt="menu" className="w-10 h-10" />
+        </button>
+        <h2 className="font-semibold ml-2">Chat</h2>
       </div>
 
-      <SentEmailsPanel
-        show={showEmails}
-        onClose={() => setShowEmails(false)}
-      />
+      <div className="flex-1 overflow-y-auto p-8 bg-gray-100">
+        {safeMessages.length === 0 ? (
+          <div className="text-center mt-20">
+            <h1 className="text-4xl font-bold">Your AI Assistant</h1>
+            <p className="text-gray-500 mt-4">Ask me anything!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {safeMessages.map((msg, i) => (
+              <div key={i} className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-indigo-600 text-white ml-auto' : 'bg-white'}`}>
+                {msg.content}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 bg-white border-t">
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            className="flex-1 p-2 border rounded-lg"
+            placeholder="Type a message..."
+          />
+          <button onClick={sendMessage} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
