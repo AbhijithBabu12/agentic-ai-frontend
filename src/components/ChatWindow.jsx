@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Landing from "./Landing";
 import MessageInput from "./MessageInput";
 import menuIcon from "../assets/menu.png";
@@ -7,8 +7,12 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
 
   const messageInputRef = useRef(null);
   const [editingDraftId, setEditingDraftId] = useState(null);
+  const bottomRef = useRef(null);
 
   const safeMessages = Array.isArray(messages) ? messages : [];
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth'});
+  }, [safeMessages]);
 
   const handleQuickAction = (text) => {
     messageInputRef.current?.sendExternalMessage(text);
@@ -170,7 +174,15 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
                         : "bg-white shadow"
                     }`}
                   >
-                    {msg.content}
+                    {msg.typing ? (
+                      <div className="flex gap-2">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150" />
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300" />
+                      </div>
+                   ) : (
+                    msg.content
+                   )}
                   </div>
 
                 )}
@@ -178,6 +190,7 @@ export default function ChatWindow({ messages, setMessages, toggleSidebar }) {
               </div>
 
             ))}
+            <div ref={bottomRef} />
 
           </div>
         )}

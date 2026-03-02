@@ -83,7 +83,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
       setMessages([
         ...baseMessages,
-        { role: "assistant", content: "" }
+        { role: "assistant", typing: true }
       ]);
 
       while (true) {
@@ -94,7 +94,7 @@ const MessageInput = forwardRef(({ setMessages, messages }, ref) => {
 
         setMessages([
           ...baseMessages,
-          { role: "assistant", content: assistantMessage }
+          { role: "assistant", content: assistantMessage, typing: false }
         ]);
       }
 
